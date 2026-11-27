@@ -676,7 +676,7 @@ struct BaaHaaShapesView: View {
         } header: {
             Text("ALL 15 COMBINATIONS")
         } footer: {
-            Text("Each row is one opening letter, each column the letter it joins. The trailing line (ـ) only shows that the word carries on. Shown in the Uthmani hand the mushaf is printed in, whatever your Arabic face is.")
+            Text("Each row is one opening letter, each column the letter it joins. The trailing line (ـ) only shows that the word carries on. Shown in the Uthmaani hand the mushaf is printed in, whatever your Arabic face is.")
         }
     }
 
@@ -745,7 +745,7 @@ struct BaaHaaShapesView: View {
         } header: {
             Text("WORDS YOU MEET IN THE QURAN")
         } footer: {
-            Text("Drawn in the mushaf's own Uthmani hand, the way the Quran reader prints them, whatever your Arabic face is, so the stacked form shows even if your face writes the pair side by side.")
+            Text("Drawn in the mushaf's own Uthmaani hand, the way the Quran reader prints them, whatever your Arabic face is, so the stacked form shows even if your face writes the pair side by side.")
         }
     }
 }

@@ -100,7 +100,7 @@ enum ArabicTopicCatalog {
 
     static let families = ArabicTopic(
         id: "families", section: .explore,
-        title: String(localized: "Letter Families"), caption: String(localized: "Makharij, sifaat, rules"),
+        title: String(localized: "Letter Families"), caption: String(localized: "Makhaarij, sifaat, rules"),
         specimen: "ص س ز",
         aliases: ["Makharij", "Sifaat", "Letter Groups", "مخارج", "صفات"],
         keywords: ["makhraj", "sifat", "articulation", "qualities", "tajweed rules", "groups",

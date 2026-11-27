@@ -95,6 +95,12 @@ struct ProphetMiraclesView: View {
         return SearchRank.sorted(matched, by: query) { [$0.title] + $0.aliases }
     }
 
+    /// The articles in the order the index lists them, group by group: the pages an article's
+    /// Previous | Next pair turns through (`ArticleSequencePager`).
+    static let readingOrder: [ArticlePageTurn.Neighbour] = Entry.Group.allCases
+        .flatMap { group in entries.filter { $0.group == group } }
+        .map { ArticlePageTurn.Neighbour(id: $0.id, title: $0.title) }
+
     private var grouped: [(Entry.Group, [Entry])] {
         Entry.Group.allCases.compactMap { group in
             let rows = Self.entries.filter { $0.group == group }
@@ -128,7 +134,7 @@ struct ProphetMiraclesView: View {
                         systemImage: "staroflife.fill",
                         headline: "We have already sent Our messengers with clear evidences.",
                         source: "Quran 57:25",
-                        message: "Every prophet was given something his people could not explain away, and it was always chosen to speak to them: sorcery in Egypt, medicine among the people of 'Isa, language among the Arabs. Read in that order, the signs given to Muhammad (peace and blessings be upon him) are not an odd claim to assess on their own. They are the last entry in a pattern Muslims, Jews and Christians already accept, and most of them were seen by crowds and reported by named witnesses.",
+                        message: "Every prophet was given something his people could not explain away, and it was always chosen to speak to them: sorcery in Egypt, medicine among the people of Eesa, language among the Arabs. Read in that order, the signs given to Muhammad (peace and blessings be upon him) are not an odd claim to assess on their own. They are the last entry in a pattern Muslims, Jews and Christians already accept, and most of them were seen by crowds and reported by named witnesses.",
                         stats: [
                             ResourceHeroStat("\(Self.entries.count)", "articles"),
                             ResourceHeroStat("\(grouped.count)", "groups"),
@@ -214,7 +220,21 @@ struct ProphetMiraclesView: View {
     }
 }
 
+/// One miracle of the Prophet, turned in place to its neighbours in the library by the pair at its foot (Abu,
+/// 2026-11-26: "For every article add a [previous] and next button at the bottom and don't make it
+/// open a new page"). Every way in opens this, so the pair is there however the page was reached.
 struct ProphetMiracleArticleView: View {
+    let entry: ProphetMiraclesView.Entry
+
+    var body: some View {
+        ArticleSequencePager(id: entry.id, pages: ProphetMiraclesView.readingOrder) { id in
+            if let page = ProphetMiraclesView.entries.first(where: { $0.id == id }) { ProphetMiracleArticlePage(entry: page) }
+        }
+    }
+}
+
+/// One page of `ProphetMiracleArticleView`.
+struct ProphetMiracleArticlePage: View {
     private let settings = Settings.shared
     @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared
@@ -241,6 +261,8 @@ struct ProphetMiracleArticleView: View {
                 SignArticleSections(sections: entry.sections, lead: entry.summary)
 
                 storiesSection
+
+                ArticlePagerSection(article: entry.id)
             }
             .themedListRowBackground()
         }

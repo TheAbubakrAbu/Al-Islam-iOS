@@ -633,10 +633,12 @@ enum ScriptureCitations {
     private static let quranMoreRegex = try? NSRegularExpression(
         pattern: #"(?:\s*[,;]\s*(?:and\s+)?|\s+and\s+)(?:(\d{1,3}):(\d{1,3})|(\d{1,3})(?=\s*[),;]|\s+and\b|\s*$))(?:\s*[-–]\s*\d{1,3})?"#)
     /// A collection's name and a number: "Sahih al-Bukhari 831", "Jami` at-Tirmidhi 2516", "Sahih
-    /// Muslim Introduction 9", "Muslim 8a". Longest names first; a bare "Ahmad" is left alone (it
-    /// is also just a name).
+    /// Muslim Introduction 9", "Muslim 8a". The Islam tab writes its long vowels doubled ("Saheeh
+    /// al-Bukhaari 831", "Jaami‘ at-Tirmidhi", "Sunan Abi Daawood", Scripts/transliteration.py), so each
+    /// long vowel here takes either spelling, and `HadithReferenceParser.words` reads both alike.
+    /// Longest names first; a bare "Ahmad" is left alone (it is also just a name).
     private static let hadithRegex = try? NSRegularExpression(
-        pattern: #"\b(Sahih al-Bukhari|Sahih Bukhari|Sahih Muslim|Sunan Abi Dawud|Sunan Abu Dawud|Sunan (?:al|at)-Tirmidhi|Jami['`’ʿ]? ?(?:at|al)-Tirmidhi|Sunan Ibn Majah|Sunan (?:an|al)-Nasa['’]?i|Musnad Ahmad|Sunan al-Darimi|Muwatta Malik|Riyad as-Salihin|Bulugh al-Maram|al-Adab al-Mufrad|al-Bukhari|Bukhari|Muslim|Abu Dawud|Abi Dawud|(?:at|al)-Tirmidhi|Tirmidhi|Ibn Majah|(?:an|al)-Nasa['’]?i|Nasa['’]?i)(\s+Introduction)?\s+(\d{1,5})([a-z]{1,2})?\b"#)
+        pattern: #"\b(Sah(?:i|ee)h al-Bukha{1,2}ri|Sah(?:i|ee)h Bukha{1,2}ri|Sah(?:i|ee)h Muslim|Sunan Abi Da{1,2}w(?:u|oo)d|Sunan Ab(?:u|oo) Da{1,2}w(?:u|oo)d|Sunan (?:al|at)-Tirmidhi|Ja{1,2}mi['`‘’ʿ]? ?(?:at|al)-Tirmidhi|Sunan Ibn Ma{1,2}jah|Sunan (?:an|al)-Nasa{1,2}['’]?i|Musnad Ahmad|Sunan (?:ad|al)-Da{1,2}rimi|Muwatta['’]? Ma{1,2}lik|Riya{1,2}d as-Sa{1,2}lih(?:i|ee)n|Bul(?:u|oo)gh al-Mara{1,2}m|al-Adab al-Mufrad|al-Bukha{1,2}ri|Bukha{1,2}ri|Muslim|Ab(?:u|oo) Da{1,2}w(?:u|oo)d|Abi Da{1,2}w(?:u|oo)d|(?:at|al)-Tirmidhi|Tirmidhi|Ibn Ma{1,2}jah|(?:an|al)-Nasa{1,2}['’]?i|Nasa{1,2}['’]?i)(\s+Introduction)?\s+(\d{1,5})([a-z]{1,2})?\b"#)
     /// The same collection again: "Sahih al-Bukhari 1, 54" or "... 1 and 54".
     private static let hadithMoreRegex = try? NSRegularExpression(
         pattern: #"\s*(?:,|and|&)\s*(\d{1,5})([a-z]{1,2})?(?=\s*[),;]|\s+and\b|\s*$)"#)

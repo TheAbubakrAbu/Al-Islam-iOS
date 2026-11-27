@@ -107,6 +107,12 @@ struct SunnahView: View {
         return SearchRank.sorted(matched, by: query) { [$0.title] + $0.aliases }
     }
 
+    /// The articles in the order the index lists them, group by group: the pages an article's
+    /// Previous | Next pair turns through (`ArticleSequencePager`).
+    static let readingOrder: [ArticlePageTurn.Neighbour] = Entry.Group.allCases
+        .flatMap { group in entries.filter { $0.group == group } }
+        .map { ArticlePageTurn.Neighbour(id: $0.id, title: $0.title) }
+
     private var grouped: [(Entry.Group, [Entry])] {
         Entry.Group.allCases.compactMap { group in
             let rows = Self.entries.filter { $0.group == group }
@@ -140,7 +146,7 @@ struct SunnahView: View {
                         systemImage: "sun.horizon.fill",
                         headline: "There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often.",
                         source: "Quran 33:21",
-                        message: "A sunnah is something he did, said or approved, and most of his daily ones cost nothing: a few words on waking, the right hand at a meal, two rak'ahs before Fajr, the siwak. This library gathers \(Self.entries.count) of them in the order of a day, each with the narration it rests on and how to keep it. Every hadith is quoted from this app's own collections and is sahih or hasan; where the graders differ, the citation names the grader followed.",
+                        message: "A sunnah is something he did, said or approved, and most of his daily ones cost nothing: a few words on waking, the right hand at a meal, two rak‘ahs before Fajr, the siwaak. This library gathers \(Self.entries.count) of them in the order of a day, each with the narration it rests on and how to keep it. Every hadith is quoted from this app's own collections and is saheeh or hasan; where the graders differ, the citation names the grader followed.",
                         stats: [
                             ResourceHeroStat("\(Self.entries.count)", "sunnahs"),
                             ResourceHeroStat("\(grouped.count)", "groups"),
@@ -154,7 +160,7 @@ struct SunnahView: View {
                         title: "MOST EMPHASISED",
                         icon: "star.fill",
                         items: Self.emphasised,
-                        footer: "The sunnahs he kept to most closely and urged most, as the scholars count them: the regular prayers around the obligatory ones, Witr, the siwak, the words said on lying down and on waking. The app's own pick."
+                        footer: "The sunnahs he kept to most closely and urged most, as the scholars count them: the regular prayers around the obligatory ones, Witr, the siwaak, the words said on lying down and on waking. The app's own pick."
                     ) { row($0) }
 
                     ForEach(grouped, id: \.0.id) { group, rows in
@@ -169,7 +175,7 @@ struct SunnahView: View {
                                       doors: [.sunnah, .hadith, .prophet, .islam],
                                       openDoor: $openDoor)
 
-                    Section(footer: Text("The list follows what the scholars of the Sunnah count as his daily practice: Khalid al-Husainan\u{2019}s \u{201C}More than a Thousand Sunnahs in Every Day and Night\u{201D} and the rulings of IslamQA, Ibn Baz and Ibn \u{2018}Uthaymin. The wording is this app\u{2019}s own, and every narration is quoted from the hadith collections bundled in it, sahih or hasan only.")) {
+                    Section(footer: Text("The list follows what the scholars of the Sunnah count as his daily practice: Khaalid al-Husainaan\u{2019}s \u{201C}More than a Thousand Sunnahs in Every Day and Night\u{201D} and the rulings of IslamQA, Ibn Baaz and Ibn \u{2018}Uthaymeen. The wording is this app\u{2019}s own, and every narration is quoted from the hadith collections bundled in it, saheeh or hasan only.")) {
                         EmptyView()
                     }
                 } else {
@@ -217,7 +223,21 @@ struct SunnahView: View {
     }
 }
 
+/// One sunnah, turned in place to its neighbours in the library by the pair at its foot (Abu,
+/// 2026-11-26: "For every article add a [previous] and next button at the bottom and don't make it
+/// open a new page"). Every way in opens this, so the pair is there however the page was reached.
 struct SunnahArticleView: View {
+    let entry: SunnahView.Entry
+
+    var body: some View {
+        ArticleSequencePager(id: entry.id, pages: SunnahView.readingOrder) { id in
+            if let page = SunnahView.entries.first(where: { $0.id == id }) { SunnahArticlePage(entry: page) }
+        }
+    }
+}
+
+/// One page of `SunnahArticleView`.
+struct SunnahArticlePage: View {
     let entry: SunnahView.Entry
     /// The page's sections as its search bar scans them: the corpus has no row for a generated page.
     /// Folded once here, not per body pass.
@@ -232,6 +252,8 @@ struct SunnahArticleView: View {
         List {
             Group {
                 SignArticleSections(sections: entry.sections, lead: entry.summary)
+
+                ArticlePagerSection(article: entry.id)
             }
             .themedListRowBackground()
         }

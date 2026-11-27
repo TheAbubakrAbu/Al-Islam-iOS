@@ -57,7 +57,7 @@ final class IslamSearchFilterTests: XCTestCase {
         XCTAssertEqual(number, 1)
         let found = hits("bukhari 1")
         XCTAssertFalse(found.isEmpty, "Bukhari 1 (actions are by intentions) is quoted")
-        let exact = try NSRegularExpression(pattern: #"Bukhari 1\b(?![\d])"#)
+        let exact = try NSRegularExpression(pattern: #"Bukha{1,2}ri 1\b(?![\d])"#)
         for hit in found {
             let text = hit.section.text
             XCTAssertNotNil(exact.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),

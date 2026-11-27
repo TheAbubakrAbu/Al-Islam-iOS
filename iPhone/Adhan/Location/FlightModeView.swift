@@ -355,7 +355,7 @@ struct FlightBoardSections: View {
         }
 
         if aloft {
-            Section(header: Text("QIBLA FROM YOUR SEAT"),
+            Section(header: Text("QIBLAH FROM YOUR SEAT"),
                     footer: Text("A phone's compass cannot be trusted inside an aircraft, so this comes from the route. Face it if you can stand and turn; if you cannot, pray as you are able.")) {
                 FlightQiblaRow(timeline: timeline)
             }
@@ -666,7 +666,7 @@ private struct FlightQiblaRow: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(FlightFormat.qiblaPhrase(relative: reading.relative))
                             .font(.body.weight(.semibold))
-                        Text(String(localized: "Qibla \(Int(reading.qibla.rounded()))°, the plane is flying \(Int(reading.course.rounded()))°").localizedDigits)
+                        Text(String(localized: "Qiblah \(Int(reading.qibla.rounded()))°, the plane is flying \(Int(reading.course.rounded()))°").localizedDigits)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -675,7 +675,7 @@ private struct FlightQiblaRow: View {
                 .padding(.vertical, 4)
                 .accessibilityElement(children: .combine)
             } else {
-                Text("The Qibla from your seat shows once the plane is in the air.")
+                Text("The Qiblah from your seat shows once the plane is in the air.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

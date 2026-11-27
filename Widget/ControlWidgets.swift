@@ -85,18 +85,18 @@ struct QiblaControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: ControlWidgetKind.qibla) {
             ControlWidgetButton(action: OpenQiblaIntent()) {
-                Label("Qibla", systemImage: "location.north.line.fill")
+                Label("Qiblah", systemImage: "location.north.line.fill")
             }
         }
-        .displayName("Qibla")
+        .displayName("Qiblah")
         .description("Opens the compass pointing to the Kaaba.")
     }
 }
 
 @available(iOS 18.0, *)
 struct OpenQiblaIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Qibla"
-    static var description = IntentDescription("Opens the Qibla compass.")
+    static var title: LocalizedStringResource = "Open Qiblah"
+    static var description = IntentDescription("Opens the Qiblah compass.")
     static var openAppWhenRun = true
     /// Shortcuts has its own prayer intents; this one exists for the control.
     static var isDiscoverable = false

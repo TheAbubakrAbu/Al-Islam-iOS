@@ -344,16 +344,16 @@ final class JournalStore: ObservableObject {
     #if DEBUG
     private func seedSamples() {
         var khutbah = JournalEntry(kind: .khutbah, title: "Gratitude in hardship")
-        khutbah.text = "## First khutbah\nThe khatib built the whole khutbah on 14:7: gratitude is not a reaction to ease but the cause of increase.\n\n## Second khutbah\nThree practical ways to thank Allah with the limbs, not only the tongue.\n\n## Action points\n- Say alhamdulillah out loud after every prayer this week\n- Write down three blessings before sleeping"
+        khutbah.text = "## First khutbah\nThe khateeb built the whole khutbah on 14:7: gratitude is not a reaction to ease but the cause of increase.\n\n## Second khutbah\nThree practical ways to thank Allah with the limbs, not only the tongue.\n\n## Action points\n- Say alhamdulillah out loud after every prayer this week\n- Write down three blessings before sleeping"
         khutbah.tags = ["gratitude", "khutbah"]
-        khutbah.speaker = "Sh. Yasir"
-        khutbah.place = "Masjid an-Nur"
-        khutbah.attachments = [JournalAttachment(kind: .ayah, refID: "14:7", title: "Ibrahim 14:7",
+        khutbah.speaker = "Sh. Yaasir"
+        khutbah.place = "Masjid an-Noor"
+        khutbah.attachments = [JournalAttachment(kind: .ayah, refID: "14:7", title: "Ibraaheem 14:7",
                                                  source: "Saheeh International")]
         khutbah.pinned = true
         khutbah.createdAt = Date().addingTimeInterval(-86_400 * 2)
-        var study = JournalEntry(kind: .study, title: "Ayat al-Kursi word by word")
-        study.text = "## Passage\nAl-Baqarah 2:255, with the morphology cards.\n\n## Benefits\n- Al-Hayy al-Qayyum: the two names every other name returns to\n- 'La ta'khudhuhu sinatun wa la nawm': the order matters, drowsiness before sleep"
+        var study = JournalEntry(kind: .study, title: "Aayat al-Kursi word by word")
+        study.text = "## Passage\nAl-Baqarah 2:255, with the morphology cards.\n\n## Benefits\n- Al-Hayy al-Qayyoom: the two names every other name returns to\n- ‘La ta’khudhuhu sinatun wa la nawm’: the order matters, drowsiness before sleep"
         study.tags = ["quran", "names-of-allah"]
         study.createdAt = Date().addingTimeInterval(-3_600 * 5)
         entries = [khutbah, study]

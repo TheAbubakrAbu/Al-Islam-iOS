@@ -56,7 +56,7 @@ struct TajweedImprovingRecitationView: View {
                 }
 
                 Section(header: ArticleHeader(String(localized: "2. LISTEN TO SKILLED RECITERS"))) {
-                    ArticleParagraph(verbatim: String(localized: "Listening to skilled reciters is one of the most powerful ways to improve pronunciation and rhythm. Many students benefit from listening to classical Egyptian reciters such as Sheikh Muhammad Siddiq Al-Minshawi and Sheikh Mahmoud Khalil Al-Hussary."))
+                    ArticleParagraph(verbatim: String(localized: "Listening to skilled reciters is one of the most powerful ways to improve pronunciation and rhythm. Many students benefit from listening to classical Egyptian reciters such as Shaykh Muhammad Siddeeq Al-Minshaawi and Shaykh Mahmoud Khaleel Al-Hussary."))
 
                     ArticleParagraph(verbatim: String(localized: "Both reciters are widely respected for their clarity, precision, and strong tajweed. Their recordings typically come in two styles:"))
 
@@ -133,7 +133,7 @@ struct TajweedLipMovementView: View {
                                      title: String(localized: "Applies To"))
                 }
 
-                Section(header: ArticleHeader(String(localized: "2. MIM (م): LIP CLOSURE"))) {
+                Section(header: ArticleHeader(String(localized: "2. MEEM (م): LIP CLOSURE"))) {
                     ArticleParagraph(verbatim: String(localized: "The letter mim (م) is a bilabial letter, meaning it is produced using both lips."))
 
                     TajweedKeyLine(String(localized: "Think of the lips as folding together, not squeezing."), systemImage: "lightbulb.fill")
@@ -162,7 +162,7 @@ struct TajweedInMushafView: View {
                     ArticleParagraph(verbatim: String(localized: "This section teaches you how to recognize tajweed visually, before memorizing specific rules."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "1. LETTERS WITHOUT SUKUN (EXCLUDING MADD)"))) {
+                Section(header: ArticleHeader(String(localized: "1. LETTERS WITHOUT SUKOON (EXCLUDING MADD)"))) {
                     ArticleChecklist([String(localized: "It has no sukun"), String(localized: "And it is not a madd letter (ا و ي)")], title: String(localized: "If a letter:"))
 
                     TajweedKeyLine(String(localized: "Then that letter must be held, and some tajweed rule applies."), systemImage: "hand.raised.fill")
@@ -170,20 +170,20 @@ struct TajweedInMushafView: View {
                     ArticleParagraph(verbatim: String(localized: "This usually means: Ghunnah, Ikhfaa, Idghaam, Iqlaab, and similar rules."))
 
                     TajweedWordCard(String(localized: "Sukoon or no sukoon"), words: [
-                        TajweedWord("مِنۡ", "min", note: String(localized: "Nun has sukun: pronounce clearly")),
+                        TajweedWord("مِنۡ", "min", note: String(localized: "Noon has sukun: pronounce clearly")),
                         TajweedWord("مَن يَقُولُ", "may-yaqul", note: String(localized: "No sukun on ن: merge (idghaam)")),
-                        TajweedWord("عَلِيمٌ", "'alimun", note: String(localized: "Tanwin and no visible sukun: apply the rule")),
+                        TajweedWord("عَلِيمٌ", "'alimun", note: String(localized: "Tanween and no visible sukun: apply the rule")),
                     ], size: 23)
 
                     ArticleParagraph(verbatim: String(localized: "If there is no sukun, the sound does not pass quickly."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "2. TANWIN SHAPE"))) {
-                    ArticleParagraph(verbatim: String(localized: "Tanwin always ends in a hidden nun sakinah, which is why its shape matters."))
+                Section(header: ArticleHeader(String(localized: "2. TANWEEN SHAPE"))) {
+                    ArticleParagraph(verbatim: String(localized: "Tanween always ends in a hidden nun sakinah, which is why its shape matters."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "SPECIAL TANWIN MARKS IN THE MUSHAF"))) {
-                    ArticleParagraph(verbatim: String(localized: "Some Uthmani tanwin marks are drawn differently to tell you whether the hidden noon sound needs a special rule."))
+                Section(header: ArticleHeader(String(localized: "SPECIAL TANWEEN MARKS IN THE MUSHAF"))) {
+                    ArticleParagraph(verbatim: String(localized: "Some Uthmaani tanwin marks are drawn differently to tell you whether the hidden noon sound needs a special rule."))
 
                     TajweedWordCard(String(localized: "Version 1: special rule"),
                                     note: String(localized: "When the tanwin is written with the special mark, look at the next real letter and apply the noon sakinah/tanwin rule: ikhfaa, idghaam, iqlaab, or the correct ghunnah behavior."),
@@ -202,7 +202,7 @@ struct TajweedInMushafView: View {
                                     ])
                 }
 
-                Section(header: ArticleHeader(String(localized: "A. PARALLEL TANWIN → IDHAAR"))) {
+                Section(header: ArticleHeader(String(localized: "A. PARALLEL TANWEEN → IDHAAR"))) {
                     ArticleParagraph(verbatim: String(localized: "When the two tanwin strokes are parallel, the nun is pronounced clearly."))
 
                     TajweedWordCard(String(localized: "Stacked: the hidden noon is said clearly"), words: [
@@ -215,7 +215,7 @@ struct TajweedInMushafView: View {
                     ArticleParagraph(verbatim: String(localized: "You hear a full, clear \"n\" sound."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "B. STAGGERED / CONNECTED TANWIN"))) {
+                Section(header: ArticleHeader(String(localized: "B. STAGGERED / CONNECTED TANWEEN"))) {
                     ArticleParagraph(verbatim: String(localized: "When tanwin marks appear staggered, connected, or visually altered, this usually indicates Idghaam, Ikhfaa, or Iqlaab."))
 
                     TajweedWordCard(String(localized: "Staggered: do not pronounce the noon normally"), words: [
@@ -232,7 +232,7 @@ struct TajweedInMushafView: View {
                 Section(header: ArticleHeader(String(localized: "3. THE LAAM OF \"AL-\" (ٱلـ)"))) {
                     ArticleParagraph(verbatim: String(localized: "The definite article \"al-\" also signals pronunciation through markings."))
 
-                    TajweedWordCard(String(localized: "A. Sukun on laam (qamariyyah)"), words: [
+                    TajweedWordCard(String(localized: "A. Sukoon on laam (qamariyyah)"), words: [
                         TajweedWord("ٱلۡقَمَر", "al-qamar"),
                         TajweedWord("ٱلۡكِتَٰب", "al-kitab"),
                         TajweedWord("ٱلۡهُدَىٰ", "al-huda"),
@@ -269,33 +269,33 @@ struct TajweedMakharijView: View {
         List {
             Group {
                 Section(header: ArticleHeader(String(localized: "MAKHAARIJ"))) {
-                    ArticleLead(String(localized: "Makharij are the physical points of articulation from which Arabic letters are pronounced. Correct makharij are the foundation of tajweed. If the letter does not come from its proper place, no amount of rules will fix the sound."), eyebrow: String(localized: "IN SHORT"))
+                    ArticleLead(String(localized: "Makhaarij are the physical points of articulation from which Arabic letters are pronounced. Correct makharij are the foundation of tajweed. If the letter does not come from its proper place, no amount of rules will fix the sound."), eyebrow: String(localized: "IN SHORT"))
 
                     ArticleParagraph(verbatim: String(localized: "This section focuses on awareness, not memorization. The goal is to know where a sound comes from and what moves to produce it."))
 
-                    Image("Makharij1")
+                    Image("Makhaarij1")
                         .resizable()
                         .scaledToFit()
                         .cornerRadius(24)
-                        .focusableImage("Makharij1", title: String(localized: "Makharij al-Huruf"))
+                        .focusableImage("Makhaarij1", title: String(localized: "Makhaarij al-Huroof"))
 
-                    Image("Makharij2")
+                    Image("Makhaarij2")
                         .resizable()
                         .scaledToFit()
                         .cornerRadius(24)
-                        .focusableImage("Makharij2", title: String(localized: "Makharij al-Huruf"))
+                        .focusableImage("Makhaarij2", title: String(localized: "Makhaarij al-Huroof"))
 
                     ArticleParagraph(verbatim: String(localized: "Use these diagrams as references, not something to stare at while reciting. Over time, correct makharij become muscle memory."))
                 }
 
                 Section(header: ArticleHeader(String(localized: "RECOMMENDED PLAYLIST"))) {
                     ArticleChecklist([String(localized: "Isolated letter sounds"), String(localized: "Minimal exaggeration"), String(localized: "Clear mouth positioning")],
-                                     title: String(localized: "Use a clear, slow pronunciation playlist such as Learn Arabic 101 (Makharij series). Focus on:"),
+                                     title: String(localized: "Use a clear, slow pronunciation playlist such as Learn Arabic 101 (Makhaarij series). Focus on:"),
                                      systemImage: "ear")
 
                     TajweedKeyLine(String(localized: "Listen → imitate → repeat aloud. Silent learning does not work for makharij."), systemImage: "speaker.wave.2.fill")
 
-                    ArticleVideoLink(title: String(localized: "Makharij and sifaat, the full playlist"),
+                    ArticleVideoLink(title: String(localized: "Makhaarij and sifaat, the full playlist"),
                                      url: "https://www.youtube.com/watch?v=-YrfRpwFMe8&list=PL6TlMIZ5ylgpmlnN3EpkOec0tJ8OJZ5re", translated: true)
                 }
 
@@ -367,13 +367,13 @@ struct TajweedMakharijView: View {
                 }
 
                 Section(header: ArticleHeader(String(localized: "IMPORTANT PRACTICE ADVICE"))) {
-                    ArticleParagraph(verbatim: String(localized: "Makharij are learned by sound, not sight."))
+                    ArticleParagraph(verbatim: String(localized: "Makhaarij are learned by sound, not sight."))
 
                     ArticleParagraph(verbatim: String(localized: "If you cannot hear the difference, slow down and exaggerate slightly during practice, then return to natural recitation."))
 
                     ArticleParagraph(verbatim: String(localized: "Correct makharij preserve the Quran exactly as it was revealed."))
 
-                    ArticleClosing(String(localized: "Tajweed rules refine the sound. Makharij create it."))
+                    ArticleClosing(String(localized: "Tajweed rules refine the sound. Makhaarij create it."))
                 }
 
                 // The same families the Arabic Alphabet groups its letters by, named in both languages,
@@ -388,7 +388,7 @@ struct TajweedMakharijView: View {
                     TajweedFamilyRow(LetterTraits.shafatan)
 
                     GuardedScreenLink(screen: .letterFamilies, id: "makhraj") {
-                        LetterFamiliesView(title: String(localized: "Makharij"), axes: [.makhraj, .exit])
+                        LetterFamiliesView(title: String(localized: "Makhaarij"), axes: [.makhraj, .exit])
                             .openScreen(.letterFamilies, id: "makhraj")
                     } label: {
                         TajweedLinkLabel(systemImage: "list.number", title: String(localized: "The Seventeen Exits in Full"),
@@ -663,7 +663,7 @@ struct TajweedMaddView: View {
                     TajweedKeyLine(String(localized: "Madd is counted in harakat (counts)."), systemImage: "timer")
                 }
 
-                Section(header: ArticleHeader(String(localized: "1. MADD TABII (NATURAL)"))) {
+                Section(header: ArticleHeader(String(localized: "1. MADD TAABI‘I (NATURAL)"))) {
                     ArticleParagraph(verbatim: String(localized: "This is the default madd. If no special condition follows, this is what you apply."))
 
                     ArticleChecklist([String(localized: "Alif (ا) preceded by fathah"),
@@ -684,7 +684,7 @@ struct TajweedMaddView: View {
                     ArticleParagraph(verbatim: String(localized: "If nothing special comes after, 2 counts, no more, no less."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "2. MADD WAJIB MUTTASIL"))) {
+                Section(header: ArticleHeader(String(localized: "2. MADD WAAJIB MUTTASIL"))) {
                     ArticleChecklist([String(localized: "A madd letter"), String(localized: "Followed by a hamzah"), String(localized: "In the same word")],
                                      title: String(localized: "When It Occurs"))
 
@@ -699,7 +699,7 @@ struct TajweedMaddView: View {
                     ArticleParagraph(verbatim: String(localized: "It is called wajib because the lengthening is mandatory."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "3. MADD JAIZ MUNFASIL"))) {
+                Section(header: ArticleHeader(String(localized: "3. MADD JAAIZ MUNFASIL"))) {
                     ArticleChecklist([String(localized: "A madd letter at the end of a word"), String(localized: "Followed by a hamzah"), String(localized: "In the next word")],
                                      title: String(localized: "When It Occurs"))
 
@@ -732,8 +732,8 @@ struct TajweedMaddView: View {
                     TajweedWordCard(String(localized: "Joined in writing, separated in ruling"), words: [
                         TajweedWord("يَٰٓأَيُّهَا", "ya + ayyuha", note: String(localized: "O you…")),
                         TajweedWord("هَٰٓأَنتُمۡ", "ha + antum", note: String(localized: "here you are")),
-                        TajweedWord("يَٰٓإِبۡرَٰهِيمُ", "ya + Ibrahim", note: String(localized: "O Abraham")),
-                        TajweedWord("يَٰٓـَٔادَمُ", "ya + Adam", note: String(localized: "O Adam")),
+                        TajweedWord("يَٰٓإِبۡرَٰهِيمُ", "ya + Ibraaheem", note: String(localized: "O Abraham")),
+                        TajweedWord("يَٰٓـَٔادَمُ", "ya + Aadam", note: String(localized: "O Aadam")),
                     ])
 
                     TajweedWordCard(String(localized: "One Word Can Hold Two Different Madds"),
@@ -768,7 +768,7 @@ struct TajweedMaddView: View {
                                         TajweedWord("غَفُورًا", String(localized: "stop: gha-fu-raa")),
                                     ])
 
-                    TajweedWordCard(String(localized: "Madd Tamkin: doubled yaa"),
+                    TajweedWordCard(String(localized: "Madd Tamkeen: doubled yaa"),
                                     note: String(localized: "A kasrah + shaddah yaa meeting a madd yaa. Read 2 counts, taking care not to swallow either yaa."),
                                     words: [
                                         TajweedWord("ٱلنَّبِيِّـۧنَ", "an-nabiy-yiin"),
@@ -820,7 +820,7 @@ struct TajweedMaddView: View {
                     TajweedKeyLine(String(localized: "Length: 2, 4, or 6 counts. Madd Leen should follow the stopping style you choose for Madd Aarid lis-Sukoon, and should not be longer than it."), systemImage: "timer")
                 }
 
-                Section(header: ArticleHeader(String(localized: "5. MADD LAZIM"))) {
+                Section(header: ArticleHeader(String(localized: "5. MADD LAAZIM"))) {
                     ArticleParagraph(verbatim: String(localized: "This is the strongest and longest madd."))
 
                     ArticleChecklist([String(localized: "A madd letter"), String(localized: "Followed by a permanent sukun"), String(localized: "Either in a word or a letter name")],
@@ -828,21 +828,21 @@ struct TajweedMaddView: View {
 
                     TajweedKeyLine(String(localized: "Length: 6 counts (always)"), systemImage: "timer")
 
-                    TajweedWordCard(String(localized: "A. Madd Lazim Harfi"),
+                    TajweedWordCard(String(localized: "A. Madd Laazim Harfi"),
                                     note: String(localized: "Occurs in the disconnected letters at the start of some surahs. If the letter name itself contains a madd followed by sukun, it is 6 counts."),
                                     words: [
                                         TajweedWord("الٓمٓ", String(localized: "Alif (no madd) Laaaaaam (6) Miiiiiim (6)")),
-                                        TajweedWord("كٓهيعٓصٓ", "Kaaaaaaf (6) Haa (2) Yaa (2) 'Ayyyn (4-6) Saaaaaad (6)"),
+                                        TajweedWord("كٓهيعٓصٓ", "Kaaaaaaf (6) Haa (2) Yaa (2) Ayyyn (4-6) Saaaaaad (6)"),
                                         TajweedWord("حمٓ", "Haa (2) Miiiiiim (6)"),
                                     ], stacked: true)
 
-                    TajweedWordCard(String(localized: "B. Madd Lazim Kalimi"), note: String(localized: "Less common, but very important."), words: [
+                    TajweedWordCard(String(localized: "B. Madd Laazim Kalimi"), note: String(localized: "Less common, but very important."), words: [
                         TajweedWord("ٱلضَّآلِّينَ", "ad-daaallin"),
                         TajweedWord("ٱلطَّآمَّةُ", "at-taaammah"),
                     ])
                 }
 
-                Section(header: ArticleHeader(String(localized: "OPENING LETTERS (MUQATTA’AT)"))) {
+                Section(header: ArticleHeader(String(localized: "OPENING LETTERS (MUQATTA‘AAT)"))) {
                     ArticleParagraph(verbatim: String(localized: "Some opening letters do not contain madd. Not every opening letter is lengthened. Read the letter name."))
 
                     ArticleChecklist([String(localized: "\u{200E}ألف (alone): no madd")], title: String(localized: "Read Normally (No Madd)"), systemImage: "minus.circle.fill")
@@ -878,7 +878,7 @@ struct TajweedMaddView: View {
 
                 TajweedCourseLessons([
                     TajweedCourseLesson(id: "mudood-chart", title: String(localized: "The Whole Map")),
-                    TajweedCourseLesson(id: "madd-tabii", title: String(localized: "Madd Tabi'i: The Natural Length")),
+                    TajweedCourseLesson(id: "madd-tabii", title: String(localized: "Madd Taabi‘i: The Natural Length")),
                 ])
             }
             .themedListRowBackground()
@@ -980,7 +980,7 @@ struct TajweedIdghamIkhfaView: View {
     var body: some View {
         List {
             Group {
-                Section(header: ArticleHeader(String(localized: "NOON SAKINAH AND TANWEEN"))) {
+                Section(header: ArticleHeader(String(localized: "NOON SAAKINAH AND TANWEEN"))) {
                     ArticleLead(String(localized: "Tanween and noon saakinah are closely related, so this section groups the merge and hidden-sound rules together."), eyebrow: String(localized: "IN SHORT"))
                 }
 
@@ -1090,7 +1090,7 @@ struct TajweedIdghamIkhfaView: View {
         }
         .selectableArticleList(article: "TajweedIdghamIkhfaView", kind: .page)
         .arabicDoorDestination($door)
-        .navigationTitle("Noon Sakinah and Tanween")
+        .navigationTitle("Noon Saakinah and Tanween")
     }
 }
 
@@ -1100,12 +1100,12 @@ struct TajweedMeemSakinahView: View {
     var body: some View {
         List {
             Group {
-                Section(header: ArticleHeader(String(localized: "MEEM SAKINAH"))) {
-                    ArticleLead(String(localized: "Meem Sakinah means a meem with sukoon: مْ. In tajweed, Meem Sakinah has three rules, and all three are called Shafawi because they are pronounced from the lips. The word Shafawi comes from shafah, meaning \"lip.\""), eyebrow: String(localized: "IN SHORT"))
+                Section(header: ArticleHeader(String(localized: "MEEM SAAKINAH"))) {
+                    ArticleLead(String(localized: "Meem Saakinah means a meem with sukoon: مْ. In tajweed, Meem Saakinah has three rules, and all three are called Shafawi because they are pronounced from the lips. The word Shafawi comes from shafah, meaning \"lip.\""), eyebrow: String(localized: "IN SHORT"))
 
-                    ArticleChecklist([String(localized: "Ikhfaa Shafawi"), String(localized: "Idgham Shafawi"), String(localized: "Idhaar Shafawi")], title: String(localized: "The three rules are:"))
+                    ArticleChecklist([String(localized: "Ikhfaa Shafawi"), String(localized: "Idghaam Shafawi"), String(localized: "Idhaar Shafawi")], title: String(localized: "The three rules are:"))
 
-                    ArticleParagraph(verbatim: String(localized: "These rules depend on the letter that comes after the Meem Sakinah."))
+                    ArticleParagraph(verbatim: String(localized: "These rules depend on the letter that comes after the Meem Saakinah."))
                 }
 
                 Section(header: ArticleHeader(String(localized: "WATCH"))) {
@@ -1114,7 +1114,7 @@ struct TajweedMeemSakinahView: View {
                 }
 
                 Section(header: ArticleHeader(String(localized: "1. IKHFAA SHAFAWI"))) {
-                    ArticleParagraph(verbatim: String(localized: "Ikhfaa Shafawi occurs when Meem Sakinah (مْ) is followed by the letter Ba (ب)."))
+                    ArticleParagraph(verbatim: String(localized: "Ikhfaa Shafawi occurs when Meem Saakinah (مْ) is followed by the letter Ba (ب)."))
 
                     ArticleParagraph(verbatim: String(localized: "When this happens, the meem is hidden lightly while keeping ghunnah for two counts. The lips come close together, but the meem is not pronounced with full clarity like normal Idhaar."))
 
@@ -1123,24 +1123,24 @@ struct TajweedMeemSakinahView: View {
                     TajweedArabicLine("أَم بِهِۦ جِنَّةُۢ", title: String(localized: "Example"),
                                       caption: String(localized: "How to read it: am bihi, with ghunnah for two counts."))
 
-                    ArticleParagraph(verbatim: String(localized: "In this example, the Meem Sakinah in أَم is followed by ب in بِهِۦ, so it is read with Ikhfaa Shafawi."))
+                    ArticleParagraph(verbatim: String(localized: "In this example, the Meem Saakinah in أَم is followed by ب in بِهِۦ, so it is read with Ikhfaa Shafawi."))
                 }
 
-                Section(header: ArticleHeader(String(localized: "2. IDGHAM SHAFAWI"))) {
-                    ArticleParagraph(verbatim: String(localized: "Idgham Shafawi occurs when Meem Sakinah (مْ) is followed by another Meem (م)."))
+                Section(header: ArticleHeader(String(localized: "2. IDGHAAM SHAFAWI"))) {
+                    ArticleParagraph(verbatim: String(localized: "Idghaam Shafawi occurs when Meem Saakinah (مْ) is followed by another Meem (م)."))
 
                     ArticleParagraph(verbatim: String(localized: "When this happens, the first meem merges into the second meem, and the result is read as a doubled meem with ghunnah for two counts."))
 
-                    TajweedKeyLine(String(localized: "\u{200E}مْ\u{200E} + م = Idgham Shafawi"), systemImage: "equal.circle.fill")
+                    TajweedKeyLine(String(localized: "\u{200E}مْ\u{200E} + م = Idghaam Shafawi"), systemImage: "equal.circle.fill")
 
                     TajweedArabicLine("وَلَهُم مَّا يَشۡتَهُونَ", title: String(localized: "Example"),
                                       caption: String(localized: "How to read it: lahum maa, with ghunnah for two counts."))
 
-                    ArticleParagraph(verbatim: String(localized: "In this example, the Meem Sakinah at the end of لَهُم is followed by another meem in مَّا, so the two meems merge."))
+                    ArticleParagraph(verbatim: String(localized: "In this example, the Meem Saakinah at the end of لَهُم is followed by another meem in مَّا, so the two meems merge."))
                 }
 
                 Section(header: ArticleHeader(String(localized: "3. IDHAAR SHAFAWI"))) {
-                    ArticleParagraph(verbatim: String(localized: "Idhaar Shafawi occurs when Meem Sakinah (مْ) is followed by any letter other than Ba (ب) or Meem (م)."))
+                    ArticleParagraph(verbatim: String(localized: "Idhaar Shafawi occurs when Meem Saakinah (مْ) is followed by any letter other than Ba (ب) or Meem (م)."))
 
                     ArticleParagraph(verbatim: String(localized: "When this happens, the meem is pronounced clearly with no extra ghunnah beyond its normal sound."))
 
@@ -1148,7 +1148,7 @@ struct TajweedMeemSakinahView: View {
 
                     TajweedArabicLine("وَمَا بَلَغُواْ مِعۡشَارَ مَآ ءَاتَيۡنَٰهُمۡ فَكَذَّبُواْ رُسُلِي", title: String(localized: "Example"), size: 24)
 
-                    ArticleParagraph(verbatim: String(localized: "In this example, the Meem Sakinah in ءَاتَيۡنَٰهُمۡ is followed by ف, so it is read with Idhaar Shafawi."))
+                    ArticleParagraph(verbatim: String(localized: "In this example, the Meem Saakinah in ءَاتَيۡنَٰهُمۡ is followed by ف, so it is read with Idhaar Shafawi."))
 
                     TajweedWordCard(String(localized: "Clear before any other letter"), words: [
                         TajweedWord("لَكُمۡ فِيهَا", "lakum fiha"),
@@ -1166,19 +1166,19 @@ struct TajweedMeemSakinahView: View {
                         TajweedWord("لَمَّا", "lamma"),
                     ])
 
-                    ArticleParagraph(verbatim: String(localized: "This is not one of the three Meem Sakinah rules, but it is closely related because it also involves ghunnah on meem."))
+                    ArticleParagraph(verbatim: String(localized: "This is not one of the three Meem Saakinah rules, but it is closely related because it also involves ghunnah on meem."))
                 }
 
                 Section(header: ArticleHeader(String(localized: "QUICK SUMMARY"))) {
-                    TajweedKeyLine(String(localized: "Meem Sakinah = مْ"), systemImage: "m.circle.fill")
+                    TajweedKeyLine(String(localized: "Meem Saakinah = مْ"), systemImage: "m.circle.fill")
 
                     ArticleStep(verbatim: String(localized: "1. Ikhfaa Shafawi: مۡ\u{200E} + ب, hide the meem with ghunnah. Example: أَم بِهِۦ"))
-                    ArticleStep(verbatim: String(localized: "2. Idgham Shafawi: مۡ\u{200E} + م, merge the two meems with ghunnah. Example: لَهُم مَّا"))
+                    ArticleStep(verbatim: String(localized: "2. Idghaam Shafawi: مۡ\u{200E} + م, merge the two meems with ghunnah. Example: لَهُم مَّا"))
                     ArticleStep(verbatim: String(localized: "3. Idhaar Shafawi: مۡ\u{200E} + any letter except ب or م, pronounce the meem clearly. Example: لَكُمۡ فِيهَا"))
                 }
 
                 Section(header: ArticleHeader(String(localized: "SHORT SUMMARY"))) {
-                    ArticleClosing(String(localized: "Meem Sakinah has three rules. If it is followed by Ba, it is read with Ikhfaa Shafawi, meaning the meem is hidden with ghunnah. If it is followed by another Meem, it is read with Idgham Shafawi, meaning the two meems merge with ghunnah. If it is followed by any other letter, it is read with Idhaar Shafawi, meaning the meem is pronounced clearly."))
+                    ArticleClosing(String(localized: "Meem Saakinah has three rules. If it is followed by Ba, it is read with Ikhfaa Shafawi, meaning the meem is hidden with ghunnah. If it is followed by another Meem, it is read with Idghaam Shafawi, meaning the two meems merge with ghunnah. If it is followed by any other letter, it is read with Idhaar Shafawi, meaning the meem is pronounced clearly."))
                 }
 
                 // The same families the Arabic Alphabet groups its letters by, named in both languages,
@@ -1195,14 +1195,14 @@ struct TajweedMeemSakinahView: View {
                 }
 
                 TajweedCourseLessons([
-                    TajweedCourseLesson(id: "mim-sakin-rules", title: String(localized: "The Three Rules of Mim Sakin")),
-                    TajweedCourseLesson(id: "noon-mim-mushaddad", title: String(localized: "Nun and Mim with a Shaddah")),
+                    TajweedCourseLesson(id: "mim-sakin-rules", title: String(localized: "The Three Rules of Meem Saakin")),
+                    TajweedCourseLesson(id: "noon-mim-mushaddad", title: String(localized: "Noon and Meem with a Shaddah")),
                 ])
             }
             .themedListRowBackground()
         }
         .selectableArticleList(article: "TajweedMeemSakinahView", kind: .page)
-        .navigationTitle("Meem Sakinah")
+        .navigationTitle("Meem Saakinah")
     }
 }
 
@@ -1212,8 +1212,8 @@ struct TajweedSukoonView: View {
     var body: some View {
         List {
             Group {
-                Section(header: ArticleHeader(String(localized: "The 4 Types of Sukoon Marks in the Qur’an"))) {
-                    ArticleLead(String(localized: "In the Uthmani script of the Qur’an, letters may carry different kinds of sukoon-style markings. These marks tell the reciter whether a letter is pronounced, skipped, pronounced only when stopping, or affected by a special tajweed rule."), eyebrow: String(localized: "IN SHORT"))
+                Section(header: ArticleHeader(String(localized: "The 4 Types of Sukoon Marks in the Quran"))) {
+                    ArticleLead(String(localized: "In the Uthmaani script of the Quran, letters may carry different kinds of sukoon-style markings. These marks tell the reciter whether a letter is pronounced, skipped, pronounced only when stopping, or affected by a special tajweed rule."), eyebrow: String(localized: "IN SHORT"))
                 }
 
                 Section(header: ArticleHeader(String(localized: "WATCH"))) {
@@ -1222,11 +1222,11 @@ struct TajweedSukoonView: View {
                 }
 
                 Section(header: ArticleHeader(String(localized: "1. Normal Sukoon: Pronounce the Letter Without a Vowel"))) {
-                    ArticleParagraph(verbatim: String(localized: "This is the common Qur’anic sukoon mark written like ـۡ above a consonant. It means the letter has no vowel, but the letter itself is still pronounced clearly."))
+                    ArticleParagraph(verbatim: String(localized: "This is the common Quranic sukoon mark written like ـۡ above a consonant. It means the letter has no vowel, but the letter itself is still pronounced clearly."))
 
                     // Abu, 2026-11-23: "mention the first Quran one is also called uthmanic sukoon and is
                     // generally only found in the Quran".
-                    ArticleParagraph(verbatim: String(localized: "This mark is also called the Uthmani sukoon, after the Uthmani script of the mushaf. It is drawn like the head of a small خ without its dot, and it is generally found only in the Quran. Outside the Quran, Arabic writes the same thing with the round sukoon (ـْ) instead."))
+                    ArticleParagraph(verbatim: String(localized: "This mark is also called the Uthmaani sukoon, after the Uthmaani script of the mushaf. It is drawn like the head of a small خ without its dot, and it is generally found only in the Quran. Outside the Quran, Arabic writes the same thing with the round sukoon (ـْ) instead."))
 
                     TajweedArabicLine("رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ", title: String(localized: "Example"))
 
@@ -1234,11 +1234,11 @@ struct TajweedSukoonView: View {
                 }
 
                 Section(header: ArticleHeader(String(localized: "2. Permanent Silent Letter: Always Skip It"))) {
-                    ArticleParagraph(verbatim: String(localized: "This mark shows that the letter is written in the Qur’an’s script but is not pronounced. You skip it whether you continue reciting or stop."))
+                    ArticleParagraph(verbatim: String(localized: "This mark shows that the letter is written in the Quran’s script but is not pronounced. You skip it whether you continue reciting or stop."))
 
                     // Abu, 2026-11-23: the one "you ignore in the Quran is normally the default sukoon like
                     // even in this app within Hadith".
-                    ArticleParagraph(verbatim: String(localized: "Its mark is a small round circle (ـْ), and that circle is the default sukoon everywhere else. In ordinary Arabic, and in the hadith in this app, it simply means a letter with no vowel, and the letter is read. In the Uthmani mushaf it means the opposite: the letter is written, but you skip it."))
+                    ArticleParagraph(verbatim: String(localized: "Its mark is a small round circle (ـْ), and that circle is the default sukoon everywhere else. In ordinary Arabic, and in the hadith in this app, it simply means a letter with no vowel, and the letter is read. In the Uthmaani mushaf it means the opposite: the letter is written, but you skip it."))
 
                     TajweedArabicLine("بِأَيۡيْدٖ", title: String(localized: "Example"))
 
@@ -1248,19 +1248,19 @@ struct TajweedSukoonView: View {
                 // The two marks side by side, in the same words: the hadith of intentions as the Hadith
                 // tab prints it (round sukoon, read) and 98:8 (Uthmani sukoon, read; round circle, skipped).
                 // Both copied byte for byte from the shelf and the Hafs text.
-                Section(header: ArticleHeader(String(localized: "Uthmani Sukoon and the Round Sukoon Compared"))) {
-                    ArticleParagraph(verbatim: String(localized: "The same words, written both ways. In the hadith, the noon of عَنْهُ carries the round sukoon and is read. In the Quran, that noon carries the Uthmani sukoon, and the round circle is kept for the alif of وَرَضُواْ, a letter you never say."))
+                Section(header: ArticleHeader(String(localized: "Uthmaani Sukoon and the Round Sukoon Compared"))) {
+                    ArticleParagraph(verbatim: String(localized: "The same words, written both ways. In the hadith, the noon of عَنْهُ carries the round sukoon and is read. In the Quran, that noon carries the Uthmaani sukoon, and the round circle is kept for the alif of وَرَضُواْ, a letter you never say."))
 
                     TajweedArabicLine("رَضِيَ اللَّهُ عَنْهُ",
-                                      title: String(localized: "In a hadith: Sahih al-Bukhari 1"),
+                                      title: String(localized: "In a hadith: Saheeh al-Bukhaari 1"),
                                       caption: String(localized: "Round sukoon on the noon: read it. raḍiya llāhu ʿanhu"),
                                       quranic: false)
 
                     TajweedArabicLine("رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ",
                                       title: String(localized: "In the Quran: 98:8"),
-                                      caption: String(localized: "Uthmani sukoon on the noon and the meem: read them. Round circle on the last alif: skip it. raḍiya llāhu ʿanhum wa raḍū ʿanhu"))
+                                      caption: String(localized: "Uthmaani sukoon on the noon and the meem: read them. Round circle on the last alif: skip it. raḍiya llāhu ʿanhum wa raḍū ʿanhu"))
 
-                    TajweedKeyLine(String(localized: "In the Quran, the Uthmani sukoon means read the letter with no vowel, and the round circle means skip it. Outside the Quran, the round circle is the ordinary sukoon."), systemImage: "lightbulb.fill")
+                    TajweedKeyLine(String(localized: "In the Quran, the Uthmaani sukoon means read the letter with no vowel, and the round circle means skip it. Outside the Quran, the round circle is the ordinary sukoon."), systemImage: "lightbulb.fill")
                 }
 
                 Section(header: ArticleHeader(String(localized: "3. Stop-Only Letter: Pronounce It Only If You Stop"))) {
@@ -1284,7 +1284,7 @@ struct TajweedSukoonView: View {
 
                     TajweedKeyLine(String(localized: "Simple rule: No mark usually means either natural madd or a special recitation rule is happening."), systemImage: "lightbulb.fill")
 
-                    Text(verbatim: String(localized: "Note about the example رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ: there is a qalqalah effect in the consonant, but there is no special visual marking for qalqalah in the Uthmani script; you must know it by rule or consult the tajweed colors in the app to see it highlighted."))
+                    Text(verbatim: String(localized: "Note about the example رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ: there is a qalqalah effect in the consonant, but there is no special visual marking for qalqalah in the Uthmaani script; you must know it by rule or consult the tajweed colors in the app to see it highlighted."))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1317,7 +1317,7 @@ struct TajweedHamzatulWaslView: View {
                 Section(header: ArticleHeader(String(localized: "Hamzatul-Wasl: The Connecting Hamzah"))) {
                     ArticleLead(String(localized: "Hamzatul-Wasl means “the hamzah of connection.” It is only pronounced when beginning recitation from that word; if you connect from the previous word, the Hamzatul-Wasl is dropped and not pronounced."), eyebrow: String(localized: "IN SHORT"))
 
-                    ArticleParagraph(verbatim: String(localized: "In the Uthmani Qur’an script, Hamzatul-Wasl is usually written as an alif with a small ṣād-like sign above it: ٱ"))
+                    ArticleParagraph(verbatim: String(localized: "In the Uthmaani Quran script, Hamzatul-Wasl is usually written as an alif with a small ṣād-like sign above it: ٱ"))
 
                     TajweedWordCard(String(localized: "Common examples"), words: [
                         TajweedWord("ٱبۡنُواْ", "ibnu"),
@@ -1337,7 +1337,7 @@ struct TajweedHamzatulWaslView: View {
                     ArticleParagraph(verbatim: String(localized: "Outside the Quran, in books and in the hadith in this app, Hamzatul-Wasl is generally written as a plain alif (ا) with no sign on it. You can still always tell it apart. An alif is a long vowel, and no Arabic word can begin on a vowel, so an alif can never really start a word on its own: a word that begins with a bare alif begins with Hamzatul-Wasl. A hamzah that is always said, Hamzatul-Qaṭʿ, is written with its sign: أ or إ."))
 
                     TajweedArabicLine("وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى",
-                                      title: String(localized: "In a hadith: Sahih al-Bukhari 1"),
+                                      title: String(localized: "In a hadith: Saheeh al-Bukhaari 1"),
                                       caption: String(localized: "The alif of امْرِئٍ is plain: a Hamzatul-Wasl, dropped as you read on. wa innamā likulli mriʾin mā nawā"),
                                       quranic: false)
 
@@ -1355,7 +1355,7 @@ struct TajweedHamzatulWaslView: View {
                 // customize in the app". The dot line is the wasl engine's own output for 87:1
                 // (UnitTests/WaslSignSamples.swift), what the Dot setting shows in the reader.
                 Section(header: ArticleHeader(String(localized: "Some Mushafs Mark It With a Dot"))) {
-                    ArticleParagraph(verbatim: String(localized: "Mushafs that follow the Maghribi tradition, like the ones read with Warsh and Qaloon in North and West Africa, write Hamzatul-Wasl without the small ṣād. The alif carries the vowel you arrive on from the word before, and a mark tells you how to start on it: a dot above for a fatḥah, a ring below for a kasrah, and a small circle above for a ḍammah."))
+                    ArticleParagraph(verbatim: String(localized: "Mushafs that follow the Maghribi tradition, like the ones read with Warsh and Qaaloon in North and West Africa, write Hamzatul-Wasl without the small ṣād. The alif carries the vowel you arrive on from the word before, and a mark tells you how to start on it: a dot above for a fatḥah, a ring below for a kasrah, and a small circle above for a ḍammah."))
 
                     TajweedArabicLine("سَبِّحِ ٱسۡمَ رَبِّكَ ٱلۡأَعۡلَى",
                                       title: String(localized: "Saad, as in the Madinah mushaf: 87:1"),
@@ -1500,7 +1500,7 @@ struct TajweedWaqfView: View {
                                       String(localized: "Shows respect for the words of Allah")],
                                      title: String(localized: "Correct waqf:"))
 
-                    ArticleParagraph(verbatim: String(localized: "A well-known definition attributed to Ali ibn Abi Talib (may Allah be pleased with him) calls tartil \"the tajweed of the letters and knowledge of the places of stopping.\" The tajweed books quote it without a chain (al-Hudhali, al-Waqf wa al-Ibtida', p. 377; Ibn al-Jazari, an-Nashr 1/225), so it is best held as the scholars' definition rather than a proven saying of his."))
+                    ArticleParagraph(verbatim: String(localized: "A well-known definition attributed to Ali ibn Abi Taalib (may Allah be pleased with him) calls tartil \"the tajweed of the letters and knowledge of the places of stopping.\" The tajweed books quote it without a chain (al-Hudhali, al-Waqf wa al-Ibtidaa', p. 377; Ibn al-Jazari, an-Nashr 1/225), so it is best held as the scholars' definition rather than a proven saying of his."))
                 }
 
                 Section(header: ArticleHeader(String(localized: "WAQF IN THE MUSHAF"))) {
@@ -1549,7 +1549,7 @@ struct TajweedWaqfView: View {
                     TajweedKeyLine(String(localized: "Rule to remember: fathatayn disappears when stopping, but a written alif remains pronounced."), systemImage: "lightbulb.fill")
                 }
 
-                Section(header: ArticleHeader(String(localized: "3. TAA MARBUTAH (ة)"))) {
+                Section(header: ArticleHeader(String(localized: "3. TAA MARBOOTAH (ة)"))) {
                     ArticleParagraph(verbatim: String(localized: "When stopping, taa marbutah is pronounced as haa saakinah (ـهۡ)."))
 
                     TajweedWordCard(String(localized: "Ta marbutah becomes a ha"), words: [
@@ -1573,9 +1573,9 @@ struct TajweedWaqfView: View {
 
                 Section(header: ArticleHeader(String(localized: "THE FOUR KINDS OF STOP"))) {
                     ArticleStep(String(localized: "1. **Waqf Tam (Complete):** The meaning is complete and independent. Best place to stop."))
-                    ArticleStep(String(localized: "2. **Waqf Kafi (Sufficient):** The meaning is complete, but connected to what follows. Permissible to stop."))
+                    ArticleStep(String(localized: "2. **Waqf Kaafi (Sufficient):** The meaning is complete, but connected to what follows. Permissible to stop."))
                     ArticleStep(String(localized: "3. **Waqf Hasan (Good):** The wording makes sense, but the meaning is incomplete. Allowed only for breath, not preferred."))
-                    ArticleStep(String(localized: "4. **Waqf Qabih (Bad):** Stopping breaks the meaning or creates error. Not allowed."))
+                    ArticleStep(String(localized: "4. **Waqf Qabeeh (Bad):** Stopping breaks the meaning or creates error. Not allowed."))
                 }
 
                 Section(header: ArticleHeader(String(localized: "DANGEROUS STOP EXAMPLE"))) {

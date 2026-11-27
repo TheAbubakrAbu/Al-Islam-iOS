@@ -426,7 +426,7 @@ struct ArabicNounView: View {
         } header: {
             Text("HOW TO SPOT A NOUN")
         } footer: {
-            Text("Any one of these is enough. They are the signs the Ajurrumiyyah, the classic first book of grammar, gives for a noun; a verb or a harf can take none of them.")
+            Text("Any one of these is enough. They are the signs the Aajurroomiyyah, the classic first book of grammar, gives for a noun; a verb or a harf can take none of them.")
         }
     }
 
@@ -557,7 +557,7 @@ struct ArabicNounView: View {
         } header: {
             Text("WHEN THE CASE IS A LETTER")
         } footer: {
-            Text("A few nouns carry their case in a long vowel instead of a mark: the dual (ـَانِ، ـَيۡنِ), the sound masculine plural (ـُونَ، ـِينَ), and five nouns like أَب, father, when a word follows them. All three rows are from Surah Yusuf.")
+            Text("A few nouns carry their case in a long vowel instead of a mark: the dual (ـَانِ، ـَيۡنِ), the sound masculine plural (ـُونَ، ـِينَ), and five nouns like أَب, father, when a word follows them. All three rows are from Surah Yoosuf.")
         }
     }
 

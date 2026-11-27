@@ -57,7 +57,7 @@ struct ProphetFacts {
 
     static let all: [ProphetFacts] = [
         ProphetFacts(
-            key: "adam", name: "Adam", arabic: "آدَم",
+            key: "adam", name: "Aadam", arabic: "آدَم",
             english: "",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
@@ -83,11 +83,11 @@ struct ProphetFacts {
             stories: ["StoryAdamView"], pillars: "ProphetAdamView"
         ),
         ProphetFacts(
-            key: "idris", name: "Idris", arabic: "إِدْرِيس",
+            key: "idris", name: "Idrees", arabic: "إِدْرِيس",
             english: "Enoch, many say",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
-                .init(kind: .people, text: "Early, before Nuh most say"),
+                .init(kind: .people, text: "Early, before Nooh most say"),
                 .init(kind: .count, text: "2× · 2 ayahs · 2 surahs"),
                 .init(kind: .sent, text: "People not named"),
                 .init(kind: .known, text: "Raised to a high station"),
@@ -102,12 +102,12 @@ struct ProphetFacts {
             stories: ["StoryIdrisView"], pillars: "ProphetIdrisView"
         ),
         ProphetFacts(
-            key: "nuh", name: "Nuh", arabic: "نُوح",
+            key: "nuh", name: "Nooh", arabic: "نُوح",
             english: "Noah",
             tags: [
-                .init(kind: .rank, text: "Ulul ‘Azm"),
-                .init(kind: .people, text: "Line of Adam"),
-                .init(kind: .surah, text: "Surah Nuh (71)"),
+                .init(kind: .rank, text: "Ulul Azm"),
+                .init(kind: .people, text: "Line of Aadam"),
+                .init(kind: .surah, text: "Surah Nooh (71)"),
                 .init(kind: .count, text: "43× · 43 ayahs · 28 surahs"),
                 .init(kind: .sent, text: "His people"),
                 .init(kind: .known, text: "The first messenger; the Ark"),
@@ -148,14 +148,14 @@ struct ProphetFacts {
             stories: ["StoryNuhView"], pillars: "ProphetNuhView"
         ),
         ProphetFacts(
-            key: "hud", name: "Hud", arabic: "هُود",
+            key: "hud", name: "Hood", arabic: "هُود",
             english: "",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
                 .init(kind: .people, text: "Arab"),
-                .init(kind: .surah, text: "Surah Hud (11)"),
+                .init(kind: .surah, text: "Surah Hood (11)"),
                 .init(kind: .count, text: "7× · 7 ayahs · 3 surahs"),
-                .init(kind: .sent, text: "‘Ad of al-Ahqaf"),
+                .init(kind: .sent, text: "‘Ad of al-Ahqaaf"),
                 .init(kind: .known, text: "The barren wind"),
             ],
             times: 7, ayahCount: 7,
@@ -169,13 +169,13 @@ struct ProphetFacts {
             stories: ["StoryHudView"], pillars: "ProphetHudView"
         ),
         ProphetFacts(
-            key: "salih", name: "Salih", arabic: "صَالِح",
+            key: "salih", name: "Saalih", arabic: "صَالِح",
             english: "",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
                 .init(kind: .people, text: "Arab"),
                 .init(kind: .count, text: "9× · 9 ayahs · 4 surahs"),
-                .init(kind: .sent, text: "Thamud of al-Hijr"),
+                .init(kind: .sent, text: "Thamood of al-Hijr"),
                 .init(kind: .known, text: "The she-camel"),
             ],
             times: 9, ayahCount: 9,
@@ -190,16 +190,16 @@ struct ProphetFacts {
             stories: ["StorySalihView"], pillars: "ProphetSalihView"
         ),
         ProphetFacts(
-            key: "ibrahim", name: "Ibrahim", arabic: "إِبْرَاهِيم",
+            key: "ibrahim", name: "Ibraaheem", arabic: "إِبْرَاهِيم",
             english: "Abraham",
             tags: [
-                .init(kind: .rank, text: "Ulul ‘Azm"),
+                .init(kind: .rank, text: "Ulul Azm"),
                 .init(kind: .people, text: "Father of the prophets"),
                 .init(kind: .book, text: "Suhuf"),
-                .init(kind: .surah, text: "Surah Ibrahim (14)"),
+                .init(kind: .surah, text: "Surah Ibraaheem (14)"),
                 .init(kind: .count, text: "69× · 63 ayahs · 25 surahs"),
                 .init(kind: .sent, text: "His people and their king"),
-                .init(kind: .known, text: "Khalil of Allah; the fire"),
+                .init(kind: .known, text: "Khaleel of Allah; the fire"),
             ],
             times: 69, ayahCount: 63,
             surahs: [
@@ -234,11 +234,11 @@ struct ProphetFacts {
             stories: ["StoryIbrahimView"], pillars: "ProphetIbrahimView"
         ),
         ProphetFacts(
-            key: "lut", name: "Lut", arabic: "لُوط",
+            key: "lut", name: "Loot", arabic: "لُوط",
             english: "Lot",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
-                .init(kind: .people, text: "Ibrahim’s nephew"),
+                .init(kind: .people, text: "Ibraaheem’s nephew"),
                 .init(kind: .count, text: "27× · 27 ayahs · 14 surahs"),
                 .init(kind: .sent, text: "Sodom and its towns"),
                 .init(kind: .known, text: "The overturned cities"),
@@ -265,7 +265,7 @@ struct ProphetFacts {
             stories: ["StoryLutView"], pillars: "ProphetLutView"
         ),
         ProphetFacts(
-            key: "ismail", name: "Isma’il", arabic: "إِسْمَاعِيل",
+            key: "ismail", name: "Ismaa‘eel", arabic: "إِسْمَاعِيل",
             english: "Ishmael",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
@@ -290,14 +290,14 @@ struct ProphetFacts {
             stories: ["StoryKabahView"], pillars: "ProphetIsmailView"
         ),
         ProphetFacts(
-            key: "ishaq", name: "Ishaq", arabic: "إِسْحَاق",
+            key: "ishaq", name: "Ishaaq", arabic: "إِسْحَاق",
             english: "Isaac",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
-                .init(kind: .people, text: "Son of Ibrahim and Sarah"),
+                .init(kind: .people, text: "Son of Ibraaheem and Saarah"),
                 .init(kind: .count, text: "17× · 16 ayahs · 12 surahs"),
-                .init(kind: .sent, text: "The land of Sham"),
-                .init(kind: .known, text: "Glad tidings to Sarah"),
+                .init(kind: .sent, text: "The land of Shaam"),
+                .init(kind: .known, text: "Glad tidings to Saarah"),
             ],
             times: 17, ayahCount: 16,
             surahs: [
@@ -319,7 +319,7 @@ struct ProphetFacts {
             stories: ["StoryIshaqView"], pillars: "ProphetIshaqView"
         ),
         ProphetFacts(
-            key: "yaqub", name: "Ya’qub / Isra’il", arabic: "يَعْقُوب",
+            key: "yaqub", name: "Ya‘qoob / Israa’eel", arabic: "يَعْقُوب",
             english: "Jacob, Israel",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
@@ -342,7 +342,7 @@ struct ProphetFacts {
                 .init(number: 38, name: "Sad", ayahs: [45]),
             ],
             also: [
-                .init(label: "as Isra’il", times: 2, surahs: [
+                .init(label: "as Israa’eel", times: 2, surahs: [
                     .init(number: 3, name: "Ali 'Imran", ayahs: [93]),
                     .init(number: 19, name: "Maryam", ayahs: [58]),
                 ]),
@@ -350,12 +350,12 @@ struct ProphetFacts {
             stories: ["StoryYaqubView"], pillars: "ProphetYaqubView"
         ),
         ProphetFacts(
-            key: "yusuf", name: "Yusuf", arabic: "يُوسُف",
+            key: "yusuf", name: "Yoosuf", arabic: "يُوسُف",
             english: "Joseph",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
                 .init(kind: .people, text: "Israelite"),
-                .init(kind: .surah, text: "Surah Yusuf (12)"),
+                .init(kind: .surah, text: "Surah Yoosuf (12)"),
                 .init(kind: .count, text: "27× · 26 ayahs · 3 surahs"),
                 .init(kind: .sent, text: "Egypt"),
                 .init(kind: .known, text: "The best of stories"),
@@ -371,11 +371,11 @@ struct ProphetFacts {
             stories: ["StoryYusufView"], pillars: "ProphetYusufView"
         ),
         ProphetFacts(
-            key: "ayyub", name: "Ayyub", arabic: "أَيُّوب",
+            key: "ayyub", name: "Ayyoob", arabic: "أَيُّوب",
             english: "Job",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
-                .init(kind: .people, text: "Line of Nuh (6:84)"),
+                .init(kind: .people, text: "Line of Nooh (6:84)"),
                 .init(kind: .count, text: "4× · 4 ayahs · 4 surahs"),
                 .init(kind: .sent, text: "People not named"),
                 .init(kind: .known, text: "Patience in affliction"),
@@ -392,7 +392,7 @@ struct ProphetFacts {
             stories: ["StoryAyyubView"], pillars: "ProphetAyyubView"
         ),
         ProphetFacts(
-            key: "shuayb", name: "Shu’ayb", arabic: "شُعَيْب",
+            key: "shuayb", name: "Shu‘ayb", arabic: "شُعَيْب",
             english: "",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
@@ -413,14 +413,14 @@ struct ProphetFacts {
             stories: ["StoryShuaybView"], pillars: "ProphetShuaybView"
         ),
         ProphetFacts(
-            key: "musa", name: "Musa", arabic: "مُوسَىٰ",
+            key: "musa", name: "Moosa", arabic: "مُوسَىٰ",
             english: "Moses",
             tags: [
-                .init(kind: .rank, text: "Ulul ‘Azm"),
+                .init(kind: .rank, text: "Ulul Azm"),
                 .init(kind: .people, text: "Israelite, of Levi"),
-                .init(kind: .book, text: "Tawrah"),
+                .init(kind: .book, text: "Tawraah"),
                 .init(kind: .count, text: "136× · 131 ayahs · 34 surahs"),
-                .init(kind: .sent, text: "Pharaoh and Bani Isra’il"),
+                .init(kind: .sent, text: "Pharaoh and Bani Israa’eel"),
                 .init(kind: .known, text: "Allah spoke to him; the sea"),
             ],
             times: 136, ayahCount: 131,
@@ -465,14 +465,14 @@ struct ProphetFacts {
             stories: ["StoryMusaEarlyView", "StoryMusaPharaohView", "StoryWildernessView", "StoryKhidrView"], pillars: "ProphetMusaView"
         ),
         ProphetFacts(
-            key: "harun", name: "Harun", arabic: "هَارُون",
+            key: "harun", name: "Haaroon", arabic: "هَارُون",
             english: "Aaron",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
                 .init(kind: .people, text: "Israelite, of Levi"),
                 .init(kind: .count, text: "20× · 20 ayahs · 13 surahs"),
-                .init(kind: .sent, text: "Pharaoh and Bani Isra’il"),
-                .init(kind: .known, text: "Musa’s brother and minister"),
+                .init(kind: .sent, text: "Pharaoh and Bani Israa’eel"),
+                .init(kind: .known, text: "Moosa’s brother and minister"),
             ],
             times: 20, ayahCount: 20,
             surahs: [
@@ -499,7 +499,7 @@ struct ProphetFacts {
             english: "",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
-                .init(kind: .people, text: "Of Bani Isra’il, reported"),
+                .init(kind: .people, text: "Of Bani Israa’eel, reported"),
                 .init(kind: .count, text: "2× · 2 ayahs · 2 surahs"),
                 .init(kind: .sent, text: "People not named"),
                 .init(kind: .known, text: "Among the patient"),
@@ -514,15 +514,15 @@ struct ProphetFacts {
             stories: ["StoryDhulKiflView"], pillars: "ProphetDhulKiflView"
         ),
         ProphetFacts(
-            key: "dawud", name: "Dawud", arabic: "دَاوُود",
+            key: "dawud", name: "Daawood", arabic: "دَاوُود",
             english: "David",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
                 .init(kind: .people, text: "Israelite, of Judah"),
-                .init(kind: .book, text: "Zabur"),
+                .init(kind: .book, text: "Zaboor"),
                 .init(kind: .count, text: "16× · 16 ayahs · 9 surahs"),
-                .init(kind: .sent, text: "Bani Isra’il, as their king"),
-                .init(kind: .known, text: "Jalut slain; iron made soft"),
+                .init(kind: .sent, text: "Bani Israa’eel, as their king"),
+                .init(kind: .known, text: "Jaaloot slain; iron made soft"),
             ],
             times: 16, ayahCount: 16,
             surahs: [
@@ -541,13 +541,13 @@ struct ProphetFacts {
             stories: ["StoryDawudView"], pillars: "ProphetDawudView"
         ),
         ProphetFacts(
-            key: "sulayman", name: "Sulayman", arabic: "سُلَيْمَان",
+            key: "sulayman", name: "Sulaymaan", arabic: "سُلَيْمَان",
             english: "Solomon",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
-                .init(kind: .people, text: "Israelite, son of Dawud"),
+                .init(kind: .people, text: "Israelite, son of Daawood"),
                 .init(kind: .count, text: "17× · 16 ayahs · 7 surahs"),
-                .init(kind: .sent, text: "Bani Isra’il, as their king"),
+                .init(kind: .sent, text: "Bani Israa’eel, as their king"),
                 .init(kind: .known, text: "The wind, the jinn, the birds"),
             ],
             times: 17, ayahCount: 16,
@@ -565,14 +565,14 @@ struct ProphetFacts {
             stories: ["StorySulaymanView"], pillars: "ProphetSulaymanView"
         ),
         ProphetFacts(
-            key: "ilyas", name: "Ilyas", arabic: "إِلْيَاس",
+            key: "ilyas", name: "Ilyaas", arabic: "إِلْيَاس",
             english: "Elijah",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
-                .init(kind: .people, text: "Of Bani Isra’il, reported"),
+                .init(kind: .people, text: "Of Bani Israa’eel, reported"),
                 .init(kind: .count, text: "2× · 2 ayahs · 2 surahs"),
-                .init(kind: .sent, text: "The worshippers of Ba’l"),
-                .init(kind: .known, text: "He called them from Ba’l"),
+                .init(kind: .sent, text: "The worshippers of Ba‘l"),
+                .init(kind: .known, text: "He called them from Ba‘l"),
             ],
             times: 2, ayahCount: 2,
             surahs: [
@@ -580,20 +580,20 @@ struct ProphetFacts {
                 .init(number: 37, name: "As-Saffat", ayahs: [123]),
             ],
             also: [
-                .init(label: "as Il Yasin", times: 1, surahs: [
+                .init(label: "as Il Yaaseen", times: 1, surahs: [
                     .init(number: 37, name: "As-Saffat", ayahs: [130]),
                 ]),
             ],
             stories: ["StoryIlyasView"], pillars: "ProphetIlyasView"
         ),
         ProphetFacts(
-            key: "alyasa", name: "al-Yasa’", arabic: "الْيَسَع",
+            key: "alyasa", name: "al-Yasa‘", arabic: "الْيَسَع",
             english: "Elisha",
             tags: [
                 .init(kind: .rank, text: "Prophet"),
-                .init(kind: .people, text: "Of Bani Isra’il, reported"),
+                .init(kind: .people, text: "Of Bani Israa’eel, reported"),
                 .init(kind: .count, text: "2× · 2 ayahs · 2 surahs"),
-                .init(kind: .sent, text: "Bani Isra’il"),
+                .init(kind: .sent, text: "Bani Israa’eel"),
                 .init(kind: .known, text: "Among the best"),
             ],
             times: 2, ayahCount: 2,
@@ -606,15 +606,15 @@ struct ProphetFacts {
             stories: ["StoryAlyasaView"], pillars: "ProphetAlyasaView"
         ),
         ProphetFacts(
-            key: "yunus", name: "Yunus", arabic: "يُونُس",
+            key: "yunus", name: "Yoonus", arabic: "يُونُس",
             english: "Jonah",
             tags: [
                 .init(kind: .rank, text: "Messenger"),
-                .init(kind: .people, text: "Of Bani Isra’il, reported"),
-                .init(kind: .surah, text: "Surah Yunus (10)"),
+                .init(kind: .people, text: "Of Bani Israa’eel, reported"),
+                .init(kind: .surah, text: "Surah Yoonus (10)"),
                 .init(kind: .count, text: "4× · 4 ayahs · 4 surahs"),
                 .init(kind: .sent, text: "A hundred thousand or more"),
-                .init(kind: .known, text: "Dhun-Nun; the fish"),
+                .init(kind: .known, text: "Dhun-Noon; the fish"),
             ],
             times: 4, ayahCount: 4,
             surahs: [
@@ -624,7 +624,7 @@ struct ProphetFacts {
                 .init(number: 37, name: "As-Saffat", ayahs: [139]),
             ],
             also: [
-                .init(label: "as Dhun-Nun, “the one of the fish”", times: 1, surahs: [
+                .init(label: "as Dhun-Noon, “the one of the fish”", times: 1, surahs: [
                     .init(number: 21, name: "Al-Anbya", ayahs: [87]),
                 ]),
                 .init(label: "as “the companion of the fish”", times: 1, surahs: [
@@ -640,7 +640,7 @@ struct ProphetFacts {
                 .init(kind: .rank, text: "Prophet"),
                 .init(kind: .people, text: "Israelite"),
                 .init(kind: .count, text: "7× · 6 ayahs · 4 surahs"),
-                .init(kind: .sent, text: "Bani Isra’il"),
+                .init(kind: .sent, text: "Bani Israa’eel"),
                 .init(kind: .known, text: "Guardian of Maryam"),
             ],
             times: 7, ayahCount: 6,
@@ -661,7 +661,7 @@ struct ProphetFacts {
                 .init(kind: .rank, text: "Prophet"),
                 .init(kind: .people, text: "Israelite"),
                 .init(kind: .count, text: "5× · 5 ayahs · 4 surahs"),
-                .init(kind: .sent, text: "Bani Isra’il"),
+                .init(kind: .sent, text: "Bani Israa’eel"),
                 .init(kind: .known, text: "Wisdom as a boy"),
             ],
             times: 5, ayahCount: 5,
@@ -676,15 +676,15 @@ struct ProphetFacts {
             stories: ["StoryYahyaView"], pillars: "ProphetYahyaView"
         ),
         ProphetFacts(
-            key: "isa", name: "Isa", arabic: "عِيسَىٰ",
+            key: "isa", name: "Eesa", arabic: "عِيسَىٰ",
             english: "Jesus",
             tags: [
-                .init(kind: .rank, text: "Ulul ‘Azm"),
+                .init(kind: .rank, text: "Ulul Azm"),
                 .init(kind: .people, text: "Israelite, through Maryam"),
-                .init(kind: .book, text: "Injil"),
+                .init(kind: .book, text: "Injeel"),
                 .init(kind: .count, text: "25× · 25 ayahs · 11 surahs"),
-                .init(kind: .sent, text: "Bani Isra’il"),
-                .init(kind: .known, text: "Al-Masih; raised alive"),
+                .init(kind: .sent, text: "Bani Israa’eel"),
+                .init(kind: .known, text: "Al-Maseeh; raised alive"),
             ],
             times: 25, ayahCount: 25,
             surahs: [
@@ -701,7 +701,7 @@ struct ProphetFacts {
                 .init(number: 61, name: "As-Saf", ayahs: [6, 14]),
             ],
             also: [
-                .init(label: "as al-Masih", times: 11, surahs: [
+                .init(label: "as al-Maseeh", times: 11, surahs: [
                     .init(number: 3, name: "Ali 'Imran", ayahs: [45]),
                     .init(number: 4, name: "An-Nisa", ayahs: [157, 171, 172]),
                     .init(number: 5, name: "Al-Ma'idah", ayahs: [17, 72, 75]),
@@ -727,7 +727,7 @@ struct ProphetFacts {
             key: "muhammad", name: "Muhammad", arabic: "مُحَمَّد ﷺ",
             english: "",
             tags: [
-                .init(kind: .rank, text: "Ulul ‘Azm"),
+                .init(kind: .rank, text: "Ulul Azm"),
                 .init(kind: .people, text: "Arab, of Quraysh"),
                 .init(kind: .book, text: "Quran"),
                 .init(kind: .surah, text: "Surah Muhammad (47)"),
@@ -753,7 +753,7 @@ struct ProphetFacts {
             key: "maryam", name: "Maryam", arabic: "مَرْيَم",
             english: "Mary",
             tags: [
-                .init(kind: .people, text: "Family of ‘Imran"),
+                .init(kind: .people, text: "Family of Imraan"),
                 .init(kind: .surah, text: "Surah Maryam (19)"),
                 .init(kind: .count, text: "34× · 31 ayahs · 12 surahs"),
                 .init(kind: .known, text: "The only woman named"),

@@ -71,19 +71,19 @@ enum SignsAboutDoor: String, Identifiable, Hashable, CaseIterable {
         case .allah:    return "Who is Allah \u{FDFB}\u{200E}?"
         case .islam:    return "What is Islam?"
         case .muslim:   return "What is a Muslim?"
-        case .tawhid:   return "Tawhid: The Oneness of Allah"
+        case .tawhid:   return "Tawheed: The Oneness of Allah"
         case .makeDua:  return "How to Make Dua"
-        case .salah:    return "Salah (Five Daily Prayers)"
+        case .salah:    return "Salaah (Five Daily Prayers)"
         case .sawm:     return "Sawm (Fasting in Ramadan)"
-        case .zakah:    return "Zakah (Annual Charity)"
+        case .zakah:    return "Zakaah (Annual Charity)"
         case .hajj:     return "Hajj (Pilgrimage to Makkah)"
         case .tajweed:  return "Tajweed"
-        case .howToZakah:          return "How to Give Zakah"
+        case .howToZakah:          return "How to Give Zakaah"
         case .hijriCalendarArticle: return "The Hijri Calendar"
         case .sacredMonths:        return "The Four Sacred Months"
-        case .masjidHaram:         return "Al-Masjid al-Haram"
+        case .masjidHaram:         return "Al-Masjid al-Haraam"
         case .masjidNabawi:        return "Al-Masjid an-Nabawi"
-        case .dhikrVirtue:         return "Tasbih and Dhikr"
+        case .dhikrVirtue:         return "Tasbeeh and Dhikr"
         case .namesOfAllahArticle: return "The 99 Names of Allah"
         case .provingIslam:        return "Is Islam True? The Complete Case"
         }
@@ -517,47 +517,47 @@ struct ProphetSigns: Identifiable {
 enum ProphetSignsIndex {
     /// Every prophet whose signs the miracles library covers, in the order the Quran's history runs.
     static let all: [ProphetSigns] = [
-        .init(id: "ProphetNuhView", name: "Nuh", arabic: "\u{0646}\u{064F}\u{0648}\u{062D}",
+        .init(id: "ProphetNuhView", name: "Nooh", arabic: "\u{0646}\u{064F}\u{0648}\u{062D}",
               miracleEntries: ["nuh-ark"], signs: "The ark, and the flood that was left as a sign"),
-        .init(id: "ProphetHudView", name: "Hud", arabic: "\u{0647}\u{064F}\u{0648}\u{062F}",
+        .init(id: "ProphetHudView", name: "Hood", arabic: "\u{0647}\u{064F}\u{0648}\u{062F}",
               miracleEntries: ["hud-wind"], signs: "One man a whole nation could not touch, then the wind"),
-        .init(id: "ProphetSalihView", name: "Salih", arabic: "\u{0635}\u{064E}\u{0627}\u{0644}\u{0650}\u{062D}",
+        .init(id: "ProphetSalihView", name: "Saalih", arabic: "\u{0635}\u{064E}\u{0627}\u{0644}\u{0650}\u{062D}",
               miracleEntries: ["salih-camel"], signs: "The she-camel, and the water shared with her"),
-        .init(id: "ProphetIbrahimView", name: "Ibrahim", arabic: "\u{0625}\u{0650}\u{0628}\u{0631}\u{064E}\u{0627}\u{0647}\u{0650}\u{064A}\u{0645}",
+        .init(id: "ProphetIbrahimView", name: "Ibraaheem", arabic: "\u{0625}\u{0650}\u{0628}\u{0631}\u{064E}\u{0627}\u{0647}\u{0650}\u{064A}\u{0645}",
               miracleEntries: ["ibrahim-fire", "ibrahim-birds", "ibrahim-guests", "ibrahim-ram"],
               signs: "The fire made cool, the four birds, the guests, and the ransom"),
-        .init(id: "ProphetLutView", name: "Lut", arabic: "\u{0644}\u{064F}\u{0648}\u{0637}",
+        .init(id: "ProphetLutView", name: "Loot", arabic: "\u{0644}\u{064F}\u{0648}\u{0637}",
               miracleEntries: ["lut-city"], signs: "The angels at his door, and the city overturned"),
-        .init(id: "ProphetIsmailView", name: "Isma'il", arabic: "\u{0625}\u{0650}\u{0633}\u{0645}\u{064E}\u{0627}\u{0639}\u{0650}\u{064A}\u{0644}",
+        .init(id: "ProphetIsmailView", name: "Ismaa‘eel", arabic: "\u{0625}\u{0650}\u{0633}\u{0645}\u{064E}\u{0627}\u{0639}\u{0650}\u{064A}\u{0644}",
               miracleEntries: ["zamzam", "ibrahim-ram"], signs: "The spring of Zamzam, and the ransom at the sacrifice"),
-        .init(id: "ProphetIshaqView", name: "Ishaq", arabic: "\u{0625}\u{0650}\u{0633}\u{062D}\u{064E}\u{0627}\u{0642}",
+        .init(id: "ProphetIshaqView", name: "Ishaaq", arabic: "\u{0625}\u{0650}\u{0633}\u{062D}\u{064E}\u{0627}\u{0642}",
               miracleEntries: ["ibrahim-guests"], signs: "Announced by angels to a barren mother and an old father"),
-        .init(id: "ProphetYaqubView", name: "Ya'qub", arabic: "\u{064A}\u{064E}\u{0639}\u{0642}\u{064F}\u{0648}\u{0628}",
+        .init(id: "ProphetYaqubView", name: "Ya‘qoob", arabic: "\u{064A}\u{064E}\u{0639}\u{0642}\u{064F}\u{0648}\u{0628}",
               miracleEntries: ["yusuf-dream-shirt"], signs: "His sight returned by his son's shirt"),
-        .init(id: "ProphetYusufView", name: "Yusuf", arabic: "\u{064A}\u{064F}\u{0648}\u{0633}\u{064F}\u{0641}",
+        .init(id: "ProphetYusufView", name: "Yoosuf", arabic: "\u{064A}\u{064F}\u{0648}\u{0633}\u{064F}\u{0641}",
               miracleEntries: ["yusuf-dream-shirt"], signs: "The dream fulfilled, and the shirt that healed"),
-        .init(id: "ProphetAyyubView", name: "Ayyub", arabic: "\u{0623}\u{064E}\u{064A}\u{064F}\u{0651}\u{0648}\u{0628}",
+        .init(id: "ProphetAyyubView", name: "Ayyoob", arabic: "\u{0623}\u{064E}\u{064A}\u{064F}\u{0651}\u{0648}\u{0628}",
               miracleEntries: ["ayyub-spring"], signs: "The spring that healed him, and his family restored"),
-        .init(id: "ProphetShuaybView", name: "Shu'ayb", arabic: "\u{0634}\u{064F}\u{0639}\u{064E}\u{064A}\u{0628}",
+        .init(id: "ProphetShuaybView", name: "Shu‘ayb", arabic: "\u{0634}\u{064F}\u{0639}\u{064E}\u{064A}\u{0628}",
               miracleEntries: ["shuayb-shade"], signs: "The day of the shade, the answer to a mocking demand"),
-        .init(id: "ProphetMusaView", name: "Musa", arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}",
+        .init(id: "ProphetMusaView", name: "Moosa", arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}",
               miracleEntries: ["musa-river-mother", "musa-staff-hand", "musa-nine-signs", "musa-sea", "musa-desert",
                                "musa-cow", "musa-tur", "musa-khidr"],
               signs: "The river, the staff and the hand, the nine signs, the sea, the springs, the mountain"),
-        .init(id: "ProphetHarunView", name: "Harun", arabic: "\u{0647}\u{064E}\u{0627}\u{0631}\u{064F}\u{0648}\u{0646}",
+        .init(id: "ProphetHarunView", name: "Haaroon", arabic: "\u{0647}\u{064E}\u{0627}\u{0631}\u{064F}\u{0648}\u{0646}",
               miracleEntries: ["musa-staff-hand", "musa-sea"], signs: "Beside his brother before Pharaoh and at the sea"),
-        .init(id: "ProphetDawudView", name: "Dawud", arabic: "\u{062F}\u{064E}\u{0627}\u{0648}\u{064F}\u{0648}\u{062F}",
+        .init(id: "ProphetDawudView", name: "Daawood", arabic: "\u{062F}\u{064E}\u{0627}\u{0648}\u{064F}\u{0648}\u{062F}",
               miracleEntries: ["dawud-iron"], signs: "Iron softened in his hands; the mountains glorifying Allah with him"),
-        .init(id: "ProphetSulaymanView", name: "Sulayman", arabic: "\u{0633}\u{064F}\u{0644}\u{064E}\u{064A}\u{0645}\u{064E}\u{0627}\u{0646}",
+        .init(id: "ProphetSulaymanView", name: "Sulaymaan", arabic: "\u{0633}\u{064F}\u{0644}\u{064E}\u{064A}\u{0645}\u{064E}\u{0627}\u{0646}",
               miracleEntries: ["sulayman-wind-jinn", "sulayman-ant-hoopoe", "sheba-throne"],
               signs: "The wind, the jinn, the speech of birds and ants, the throne of Sheba"),
-        .init(id: "ProphetYunusView", name: "Yunus", arabic: "\u{064A}\u{064F}\u{0648}\u{0646}\u{064F}\u{0633}",
+        .init(id: "ProphetYunusView", name: "Yoonus", arabic: "\u{064A}\u{064F}\u{0648}\u{0646}\u{064F}\u{0633}",
               miracleEntries: ["yunus-whale"], signs: "Kept alive in the belly of the whale"),
         .init(id: "ProphetZakariyaView", name: "Zakariya", arabic: "\u{0632}\u{064E}\u{0643}\u{064E}\u{0631}\u{0650}\u{064A}\u{064E}\u{0651}\u{0627}",
               miracleEntries: ["zakariya-yahya"], signs: "A son in old age, and three nights without speech"),
         .init(id: "ProphetYahyaView", name: "Yahya", arabic: "\u{064A}\u{064E}\u{062D}\u{064A}\u{064E}\u{0649}",
               miracleEntries: ["zakariya-yahya"], signs: "Born to a barren mother and an old father"),
-        .init(id: "ProphetIsaView", name: "'Isa", arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}",
+        .init(id: "ProphetIsaView", name: "Eesa", arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}",
               miracleEntries: ["isa-birth-cradle", "isa-signs", "table-spread", "isa-raised"],
               signs: "Speech in the cradle, healing, the dead raised, the table, and his raising"),
         .init(id: "ProphetMuhammadView", name: "Muhammad", arabic: "\u{0645}\u{064F}\u{062D}\u{064E}\u{0645}\u{064E}\u{0651}\u{062F}",

@@ -335,8 +335,8 @@ struct AdhanPermissionSection: View {
                 .accessibilityAddTraits(.isHeader)
 
             Text(asker.locationDenied
-                 ? String(localized: "Location is off for \(AppIdentifiers.displayName) in the Settings app. Prayer times and the Qibla need it.")
-                 : String(localized: "Prayer times and the Qibla need to know where you are."))
+                 ? String(localized: "Location is off for \(AppIdentifiers.displayName) in the Settings app. Prayer times and the Qiblah need it.")
+                 : String(localized: "Prayer times and the Qiblah need to know where you are."))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

@@ -692,9 +692,9 @@ struct IslamPillarsHero: View {
     }
 
     private static let five: [Pillar] = [
-        Pillar(id: "ShahadahView", name: "Shahadah", arabic: "الشَّهَادَة", systemImage: "quote.bubble"),
-        Pillar(id: "SalahView", name: "Salah", arabic: "الصَّلَاة", systemImage: "sun.max"),
-        Pillar(id: "ZakahView", name: "Zakah", arabic: "الزَّكَاة", systemImage: "heart.circle"),
+        Pillar(id: "ShahadahView", name: "Shahaadah", arabic: "الشَّهَادَة", systemImage: "quote.bubble"),
+        Pillar(id: "SalahView", name: "Salaah", arabic: "الصَّلَاة", systemImage: "sun.max"),
+        Pillar(id: "ZakahView", name: "Zakaah", arabic: "الزَّكَاة", systemImage: "heart.circle"),
         Pillar(id: "SawmView", name: "Sawm", arabic: "الصَّوم", systemImage: "moon.stars"),
         Pillar(id: "HajjView", name: "Hajj", arabic: "الحَجّ", systemImage: "house"),
     ]
@@ -717,7 +717,7 @@ struct IslamPillarsHero: View {
             headline: "Indeed, the religion in the sight of Allah is Islam.",
             source: "Quran 3:19",
             // No figures: the building under it already counts the five and the six.
-            message: "The five pillars of Islam, the six of iman and the three of tawhid, then the Quran and the hadith, the scholars and the answers to other paths. Tap a pillar to open it."
+            message: "The five pillars of Islam, the six of eemaan and the three of tawheed, then the Quran and the hadith, the scholars and the answers to other paths. Tap a pillar to open it."
         ) {
             building
         }
@@ -787,7 +787,7 @@ struct IslamPillarsHero: View {
 
             // The foundation: the six of iman.
             VStack(spacing: 6) {
-                Text("ON THE SIX PILLARS OF IMAN")
+                Text("ON THE SIX PILLARS OF EEMAAN")
                     .font(.system(size: 9, weight: .heavy))
                     .tracking(AppLanguage.letterSpacing(1.4))
                     .foregroundColor(accent)

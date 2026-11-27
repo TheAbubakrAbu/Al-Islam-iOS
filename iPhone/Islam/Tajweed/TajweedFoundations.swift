@@ -70,8 +70,8 @@ enum TajweedTopic: String, CaseIterable, Identifiable {
         case .shamsQamar: return "Shams and Qamar: Al"
         case .madd: return "Madd (Elongation)"
         case .qalqalah: return "Qalqalah"
-        case .noonSakinah: return "Noon Sakinah and Tanween"
-        case .meemSakinah: return "Meem Sakinah"
+        case .noonSakinah: return "Noon Saakinah and Tanween"
+        case .meemSakinah: return "Meem Saakinah"
         case .mushafHints: return "Tajweed Hints in the Mushaf"
         case .sukoon: return "4 Sukoon"
         case .hamzatulWasl: return "Hamzatul Wasl"
@@ -86,7 +86,7 @@ enum TajweedTopic: String, CaseIterable, Identifiable {
         case .lips: return "Natural recitation, without overemphasis"
         case .makharij: return "Where each letter is made: the throat, the tongue, the lips"
         case .sifaat: return "The qualities that tell two letters apart"
-        case .heavyLight: return "Tafkhim and tarqiq, and the letters that change"
+        case .heavyLight: return "Tafkheem and tarqiq, and the letters that change"
         case .shamsQamar: return "When the laam of ٱلـ is read, and when it merges"
         case .madd: return "Every elongation, and how many counts it takes"
         case .qalqalah: return "The five letters that bounce"
@@ -312,7 +312,7 @@ struct TajweedFoundationsView: View {
                     learnMoreSection
 
                     Section(footer:
-                        Text("Every page is for Hafs an Asim, the riwayah of most printed mushafs. Other riwayat apply some of these rules differently.")
+                        Text("Every page is for Hafs an Aasim, the riwayah of most printed mushafs. Other riwayat apply some of these rules differently.")
                     ) { EmptyView() }
                 } else {
                     // The pages only: the links beside them (the legend, the course, the articles)
@@ -404,7 +404,7 @@ struct TajweedFoundationsView: View {
             } label: {
                 HStack(spacing: 12) {
                     TajweedLinkLabel(systemImage: "paintpalette.fill", title: String(localized: "Tajweed Legend"),
-                                     caption: String(localized: "Every rule the Quran reader colors, for Hafs an Asim"))
+                                     caption: String(localized: "Every rule the Quran reader colors, for Hafs an Aasim"))
                     Spacer(minLength: 8)
                 }
                 .contentShape(Rectangle())
@@ -588,8 +588,8 @@ private struct TajweedFoundationsHero: View {
     }
 
     private static let marks: [Mark] = [
-        Mark(topic: .noonSakinah, legend: .ikhfaaLight, name: String(localized: "Noon Sakinah"), arabic: "النُّون"),
-        Mark(topic: .meemSakinah, legend: .generalGhunnah, name: String(localized: "Meem Sakinah"), arabic: "المِيم"),
+        Mark(topic: .noonSakinah, legend: .ikhfaaLight, name: String(localized: "Noon Saakinah"), arabic: "النُّون"),
+        Mark(topic: .meemSakinah, legend: .generalGhunnah, name: String(localized: "Meem Saakinah"), arabic: "المِيم"),
         Mark(topic: .madd, legend: .maddConnected, name: String(localized: "Madd"), arabic: "المَدّ"),
         Mark(topic: .qalqalah, legend: .qalqalah, name: String(localized: "Qalqalah"), arabic: "القَلقَلَة"),
         Mark(topic: .heavyLight, legend: .tafkhim, name: String(localized: "Heavy Letters"), arabic: "التَّفخِيم"),
@@ -604,7 +604,7 @@ private struct TajweedFoundationsHero: View {
             systemImage: "waveform",
             headline: String(localized: "Those to whom We have given the Book recite it with its true recital."),
             source: String(localized: "Quran 2:121"),
-            message: String(localized: "The rules of Hafs an Asim, one topic to a page: where each letter is made and how it sounds, the rules that change it, and how to read them straight off the mushaf. Tap a color to open the rule it marks.")
+            message: String(localized: "The rules of Hafs an Aasim, one topic to a page: where each letter is made and how it sounds, the rules that change it, and how to read them straight off the mushaf. Tap a color to open the rule it marks.")
         ) {
             colors
         }
@@ -686,8 +686,8 @@ struct TajweedOverviewView: View {
                     ArticleTermCard(String(localized: "Tajweed"), arabic: "تَجوِيد",
                                     meaning: String(localized: "Linguistically, the word tajweed comes from the Arabic root ج-و-د (j-w-d), meaning \"to improve,\" \"to make excellent,\" or \"to perfect.\" In the context of the Quran, it means reciting the words of Allah as they were revealed precisely, clearly, and with care."))
 
-                    ArticleCallout(String(localized: "This guide applies specifically to riwayat Hafs an Asim, which is the most widely recited qiraah in the world today and the standard riwayah used in the majority of printed mushafs."),
-                                   title: String(localized: "Hafs an Asim"), systemImage: "book.closed.fill")
+                    ArticleCallout(String(localized: "This guide applies specifically to riwayat Hafs an Aasim, which is the most widely recited qiraah in the world today and the standard riwayah used in the majority of printed mushafs."),
+                                   title: String(localized: "Hafs an Aasim"), systemImage: "book.closed.fill")
                 }
 
                 Section(header: ArticleHeader(String(localized: "RECITATION AND PRONUNCIATION"))) {
@@ -696,9 +696,9 @@ struct TajweedOverviewView: View {
                     ArticleParagraph(verbatim: String(localized: "Pronunciation in Quranic recitation is governed by two key components:"))
 
                     ArticleVersus(
-                        .init(String(localized: "Makharij"), arabic: "مَخَارِجُ الحُرُوفِ",
+                        .init(String(localized: "Makhaarij"), arabic: "مَخَارِجُ الحُرُوفِ",
                               caption: String(localized: "The points of articulation: where each letter originates in the mouth or throat.")),
-                        .init(String(localized: "Sifat"), arabic: "صِفَاتُ الحُرُوفِ",
+                        .init(String(localized: "Sifaat"), arabic: "صِفَاتُ الحُرُوفِ",
                               caption: String(localized: "The characteristics of those letters, such as heaviness (tafkhim), lightness (tarqiq), or echoing (qalqalah).")),
                         quranic: false
                     )
@@ -737,7 +737,7 @@ struct TajweedOverviewView: View {
 
                     ArticleStep(String(localized: "4. **Following the Sunnah:** The Prophet Muhammad ﷺ encouraged reciting the Quran beautifully. By learning Tajweed, you honor his teachings and example."))
 
-                    ScriptureQuote(text: "“Whoever does not recite Qur'an in a nice voice is not from us.” (Sahih al-Bukhari 7527)",
+                    ScriptureQuote(text: "“Whoever does not recite Quran in a nice voice is not from us.” (Saheeh al-Bukhaari 7527)",
                                    arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَتَغَنَّ بِالْقُرْآنِ", dimmed: true)
                 }
 
@@ -751,9 +751,9 @@ struct TajweedOverviewView: View {
 
                 Section(header: ArticleHeader(String(localized: "APPLICABILITY TO QIRAAT"))) {
                     ArticleCallout(paragraphs: [
-                        String(localized: "Other riwayat, such as Warsh an Nafi, Khalaf an Hamzah, and others, may differ slightly in their application of tajweed rules, including elongations (madd), treatment of hamzah, and certain pronunciation details. These differences stem from authentic variations rooted in classical Arabic dialects and were transmitted through reliable chains of recitation."),
-                        String(localized: "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the dialects of the Arabs in which Allah revealed the Quran: the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Sahih al-Bukhari 2419), and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition."),
-                    ], title: String(localized: "Other Riwayat"), systemImage: "books.vertical.fill")
+                        String(localized: "Other riwayat, such as Warsh an Naafi, Khalaf an Hamzah, and others, may differ slightly in their application of tajweed rules, including elongations (madd), treatment of hamzah, and certain pronunciation details. These differences stem from authentic variations rooted in classical Arabic dialects and were transmitted through reliable chains of recitation."),
+                        String(localized: "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the dialects of the Arabs in which Allah revealed the Quran: the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Saheeh al-Bukhaari 2419), and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition."),
+                    ], title: String(localized: "Other Riwaayaat"), systemImage: "books.vertical.fill")
                 }
 
                 Section(header: ArticleHeader(String(localized: "IN SUMMARY"))) {

@@ -250,11 +250,11 @@ struct PlaceLocatorProfile {
     /// throw them away. `.store` stays out: it let any supermarket that ranked near a "halal X" query
     /// through, and with no name filter there was nothing downstream to catch it.
     static let halalFood = PlaceLocatorProfile(
-        title: String(localized: "Halal Food Locator"),
-        loadingText: String(localized: "Loading halal places…"),
-        searchingText: String(localized: "Searching nearby halal food…"),
-        emptyText: String(localized: "No halal places found in this area"),
-        fallbackName: String(localized: "Halal Place"),
+        title: String(localized: "Halaal Food Locator"),
+        loadingText: String(localized: "Loading halaal places…"),
+        searchingText: String(localized: "Searching nearby halaal food…"),
+        emptyText: String(localized: "No halaal places found in this area"),
+        fallbackName: String(localized: "Halaal Place"),
         contextMenuTitle: String(localized: "Place Info"),
         searchPrompt: String(localized: "Search a dish, a place, or a city"),
         markerSymbol: "fork.knife",

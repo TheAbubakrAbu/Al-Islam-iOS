@@ -223,7 +223,7 @@ struct QiblaView: View {
     /// accuracy and the calibration hint follow so a screen-reader user learns the reading is
     /// untrustworthy at the same moment a sighted user reads it off the card.
     private var accessibilityDescription: String {
-        var parts = [String(localized: "Qibla compass")]
+        var parts = [String(localized: "Qiblah compass")]
         if let qiblaTurnText { parts.append(qiblaTurnText) }
         if let accuracy = compass.accuracyDegrees, compass.hasHeading, accuracy > 0 {
             parts.append(String(localized: "accurate to within \(Int(accuracy)) degrees"))

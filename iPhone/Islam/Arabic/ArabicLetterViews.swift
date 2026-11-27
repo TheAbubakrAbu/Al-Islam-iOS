@@ -1244,7 +1244,7 @@ struct ArabicLetterPage: View {
                     Text("When these letters have no tashkeel, or have sukoon, and the letter before them has the matching harakah, they are treated as Madd Tabee (مَدّ طَبِيعِيّ), or natural Madd: Alif after fatha, Waw after damma, and Yaa after kasra. This is held for 2 harakaat (2 counts).")
                         .font(.body)
 
-                    Text("When the madd is longer than 2 counts, the mushaf tells you so: a squiggly line (ٓ) is written above the letter. That mark is the sign of one of the special mudood (مُدُود), such as Madd Muttassil, Madd Munfasil, or Madd Lazim, held for 4, 5, or 6 counts instead of 2. Without the squiggle, the madd stays at its natural 2 counts.")
+                    Text("When the madd is longer than 2 counts, the mushaf tells you so: a squiggly line (ٓ) is written above the letter. That mark is the sign of one of the special mudood (مُدُود), such as Madd Muttassil, Madd Munfasil, or Madd Laazim, held for 4, 5, or 6 counts instead of 2. Without the squiggle, the madd stays at its natural 2 counts.")
                         .font(.body)
 
                     // The chapter's map of every madd, which leads on to each one.
@@ -1643,14 +1643,14 @@ struct ArabicLetterPage: View {
             ArabicExampleRow(
                 arabic: "مُوسَىٰ",
                 transliteration: "Musaa",
-                note: String(localized: "Musa (Moses): names ending in the \"aa\" sound use it too")
+                note: String(localized: "Moosa (Moses): names ending in the \"aa\" sound use it too")
             )
             // Right under مُوسَىٰ on purpose: the same name without its dagger alif (Abu, 2026-11-16).
             // Byte-exact from 2:53.
             ArabicExampleRow(
                 arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0643}\u{0650}\u{062A}\u{064E}\u{0670}\u{0628}\u{064E}",
                 transliteration: "Musal-kitaaba",
-                note: String(localized: "Musa the Scripture (2:53): no dagger alif, because the next word opens with hamzatul waSl and the \"aa\" is not said when you read on")
+                note: String(localized: "Moosa the Scripture (2:53): no dagger alif, because the next word opens with hamzatul waSl and the \"aa\" is not said when you read on")
             )
             ArabicExampleRow(
                 arabic: "هُدٗى",
@@ -1682,7 +1682,7 @@ struct ArabicLetterPage: View {
 
             MaqsurahOrYaaLink()
         } header: {
-            Text("MAQSURAH OR YAA? THE VOWEL BEFORE TELLS YOU")
+            Text("MAQSOORAH OR YAA? THE VOWEL BEFORE TELLS YOU")
         } footer: {
             Text("The mushaf writes the final yaa without dots too, so the SHAPE cannot tell you which letter it is. Read the vowel before it: after a fatha (or under a dagger alif) it is alif maqSoorah and sounds \"aa\"; after a kasra it is yaa and sounds \"ee\". Outside the Quran, modern print dots the yaa (ي) and leaves the maqsurah bare (ى), so there the dots decide.")
         }
@@ -1737,7 +1737,7 @@ struct ArabicLetterPage: View {
         } else {
             switch data.transliteration {
             case "yaa":
-                Text("In the Uthmani script of the Quran, when 'yaa' is written at the end of a word (or by itself), it is usually written without the two dots underneath.")
+                Text("In the Uthmaani script of the Quran, when 'yaa' is written at the end of a word (or by itself), it is usually written without the two dots underneath.")
                     .font(.body)
             case "taa marbuuTah":
                 Group {
@@ -1777,11 +1777,11 @@ struct ArabicLetterPage: View {
                 } else if data.transliteration.contains("mad") {
                     Group {
                         ArticleLead(String(localized: "The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark."), eyebrow: String(localized: "IN SHORT"))
-                        Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Lazim.")
+                        Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Laazim.")
                         VStack(alignment: .leading, spacing: 6) {
                             ArticleBullet(String(localized: "Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts."))
                             ArticleBullet(String(localized: "Madd Munfasil (مَدّ مُنفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style."))
-                            ArticleBullet(String(localized: "Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts."))
+                            ArticleBullet(String(localized: "Madd Laazim (مَدّ لَازِم) means \"necessary Madd.\" Laazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts."))
                         }
                         Text("These are special mudood (مُدُود), the plural of Madd. They happen when natural Madd is no longer just 2 counts because hamzah, sukoon, or shaddah changes the rule.")
                     }

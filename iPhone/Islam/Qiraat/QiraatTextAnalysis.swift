@@ -50,82 +50,82 @@ enum QiraatTextAnalysis {
 
     /// In mushaf order, imam by imam, each imam's two narrators together.
     static let rows: [QiraahComparisonRow] = [
-        .init(narrator: String(localized: "Qalun"), imam: String(localized: "Nafi al-Madani"), ayahs: 6214, words: 77430,
+        .init(narrator: String(localized: "Qaaloon"), imam: String(localized: "Naafi al-Madani"), ayahs: 6214, words: 77430,
               identical: 56971, sameSkeleton: 19649, differentWord: 822),
-        .init(narrator: String(localized: "Warsh"), imam: String(localized: "Nafi al-Madani"), ayahs: 6214, words: 77427,
+        .init(narrator: String(localized: "Warsh"), imam: String(localized: "Naafi al-Madani"), ayahs: 6214, words: 77427,
               identical: 54562, sameSkeleton: 21367, differentWord: 1544),
-        .init(narrator: String(localized: "al-Bazzi"), imam: String(localized: "Ibn Kathir al-Makki"), ayahs: 6220, words: 77432,
+        .init(narrator: String(localized: "al-Bazzi"), imam: String(localized: "Ibn Katheer al-Makki"), ayahs: 6220, words: 77432,
               identical: 65019, sameSkeleton: 12040, differentWord: 380),
-        .init(narrator: String(localized: "Qunbul"), imam: String(localized: "Ibn Kathir al-Makki"), ayahs: 6220, words: 77433,
+        .init(narrator: String(localized: "Qunbul"), imam: String(localized: "Ibn Katheer al-Makki"), ayahs: 6220, words: 77433,
               identical: 65064, sameSkeleton: 12035, differentWord: 337),
-        .init(narrator: String(localized: "ad-Duri"), imam: String(localized: "Abu Amr al-Basri"), ayahs: 6217, words: 77426,
+        .init(narrator: String(localized: "ad-Doori"), imam: String(localized: "Abu Amr al-Basri"), ayahs: 6217, words: 77426,
               identical: 61241, sameSkeleton: 15881, differentWord: 311),
-        .init(narrator: String(localized: "as-Susi"), imam: String(localized: "Abu Amr al-Basri"), ayahs: 6217, words: 77468,
+        .init(narrator: String(localized: "as-Soosi"), imam: String(localized: "Abu Amr al-Basri"), ayahs: 6217, words: 77468,
               identical: 55599, sameSkeleton: 20809, differentWord: 1093),
-        .init(narrator: String(localized: "Hisham"), imam: String(localized: "Ibn Amir ash-Shami"), ayahs: 6226, words: 77425,
+        .init(narrator: String(localized: "Hishaam"), imam: String(localized: "Ibn Aamir ash-Shaami"), ayahs: 6226, words: 77425,
               identical: 76039, sameSkeleton: 1152, differentWord: 244),
-        .init(narrator: String(localized: "Ibn Dhakwan"), imam: String(localized: "Ibn Amir ash-Shami"), ayahs: 6226, words: 77425,
+        .init(narrator: String(localized: "Ibn Dhakwaan"), imam: String(localized: "Ibn Aamir ash-Shaami"), ayahs: 6226, words: 77425,
               identical: 76000, sameSkeleton: 1194, differentWord: 240),
-        .init(narrator: String(localized: "Shu'bah"), imam: String(localized: "Asim al-Kufi"), ayahs: 6236, words: 77431,
+        .init(narrator: String(localized: "Shu‘bah"), imam: String(localized: "Aasim al-Koofi"), ayahs: 6236, words: 77431,
               identical: 76756, sameSkeleton: 540, differentWord: 136),
-        .init(narrator: String(localized: "Hafs"), imam: String(localized: "Asim al-Kufi"), ayahs: 6236, words: 77430,
+        .init(narrator: String(localized: "Hafs"), imam: String(localized: "Aasim al-Koofi"), ayahs: 6236, words: 77430,
               identical: 77430, sameSkeleton: 0, differentWord: 0),
-        .init(narrator: String(localized: "Khalaf"), imam: String(localized: "Hamzah az-Zayyat"), ayahs: 6236, words: 77433,
+        .init(narrator: String(localized: "Khalaf"), imam: String(localized: "Hamzah az-Zayyaat"), ayahs: 6236, words: 77433,
               identical: 70871, sameSkeleton: 6327, differentWord: 242),
-        .init(narrator: String(localized: "Khallad"), imam: String(localized: "Hamzah az-Zayyat"), ayahs: 6236, words: 77431,
+        .init(narrator: String(localized: "Khallaad"), imam: String(localized: "Hamzah az-Zayyaat"), ayahs: 6236, words: 77431,
               identical: 74031, sameSkeleton: 3183, differentWord: 222),
-        .init(narrator: String(localized: "Abu al-Harith"), imam: String(localized: "al-Kisai"), ayahs: 6236, words: 77434,
+        .init(narrator: String(localized: "Abu al-Haarith"), imam: String(localized: "al-Kisaa’i"), ayahs: 6236, words: 77434,
               identical: 74155, sameSkeleton: 3022, differentWord: 264),
-        .init(narrator: String(localized: "ad-Duri an al-Kisai"), imam: String(localized: "al-Kisai"), ayahs: 6236, words: 77433,
+        .init(narrator: String(localized: "ad-Doori an al-Kisaa’i"), imam: String(localized: "al-Kisaa’i"), ayahs: 6236, words: 77433,
               identical: 73828, sameSkeleton: 3351, differentWord: 260),
-        .init(narrator: String(localized: "Ruways"), imam: String(localized: "Ya'qub al-Hadrami"), ayahs: 6204, words: 77428,
+        .init(narrator: String(localized: "Ruways"), imam: String(localized: "Ya‘qoob al-Hadrami"), ayahs: 6204, words: 77428,
               identical: 59053, sameSkeleton: 18107, differentWord: 278),
-        .init(narrator: String(localized: "Rawh"), imam: String(localized: "Ya'qub al-Hadrami"), ayahs: 6206, words: 77425,
+        .init(narrator: String(localized: "Rawh"), imam: String(localized: "Ya‘qoob al-Hadrami"), ayahs: 6206, words: 77425,
               identical: 59311, sameSkeleton: 17889, differentWord: 233),
-        .init(narrator: String(localized: "Ibn Wardan"), imam: String(localized: "Abu Ja'far al-Madani"), ayahs: 6214, words: 77424,
+        .init(narrator: String(localized: "Ibn Wardaan"), imam: String(localized: "Abu Ja‘far al-Madani"), ayahs: 6214, words: 77424,
               identical: 49447, sameSkeleton: 26552, differentWord: 1561),
-        .init(narrator: String(localized: "Ibn Jammaz"), imam: String(localized: "Abu Ja'far al-Madani"), ayahs: 6214, words: 77425,
+        .init(narrator: String(localized: "Ibn Jammaaz"), imam: String(localized: "Abu Ja‘far al-Madani"), ayahs: 6214, words: 77425,
               identical: 49452, sameSkeleton: 26551, differentWord: 1557),
-        .init(narrator: String(localized: "Ishaq"), imam: String(localized: "Khalaf al-Ashir"), ayahs: 6236, words: 77432,
+        .init(narrator: String(localized: "Ishaaq"), imam: String(localized: "Khalaf al-Aashir"), ayahs: 6236, words: 77432,
               identical: 74395, sameSkeleton: 2834, differentWord: 208),
-        .init(narrator: String(localized: "Idris"), imam: String(localized: "Khalaf al-Ashir"), ayahs: 6236, words: 77432,
+        .init(narrator: String(localized: "Idrees"), imam: String(localized: "Khalaf al-Aashir"), ayahs: 6236, words: 77432,
               identical: 74395, sameSkeleton: 2834, differentWord: 208),
     ]
 
     /// Each imam's two narrators measured against each other rather than against Hafs.
     static let pairs: [QiraahPairRow] = [
-        .init(imam: String(localized: "Nafi"), narrators: String(localized: "Qalun and Warsh"),
+        .init(imam: String(localized: "Naafi"), narrators: String(localized: "Qaaloon and Warsh"),
               identical: 65972, percent: 85.20, differentWord: 852),
-        .init(imam: String(localized: "Ibn Kathir"), narrators: String(localized: "al-Bazzi and Qunbul"),
+        .init(imam: String(localized: "Ibn Katheer"), narrators: String(localized: "al-Bazzi and Qunbul"),
               identical: 77233, percent: 99.74, differentWord: 59),
-        .init(imam: String(localized: "Abu Amr"), narrators: String(localized: "ad-Duri and as-Susi"),
+        .init(imam: String(localized: "Abu Amr"), narrators: String(localized: "ad-Doori and as-Soosi"),
               identical: 70484, percent: 90.98, differentWord: 724),
-        .init(imam: String(localized: "Ibn Amir"), narrators: String(localized: "Hisham and Ibn Dhakwan"),
+        .init(imam: String(localized: "Ibn Aamir"), narrators: String(localized: "Hishaam and Ibn Dhakwaan"),
               identical: 76676, percent: 99.03, differentWord: 23),
-        .init(imam: String(localized: "Asim"), narrators: String(localized: "Shu'bah and Hafs"),
+        .init(imam: String(localized: "Aasim"), narrators: String(localized: "Shu‘bah and Hafs"),
               identical: 76756, percent: 99.13, differentWord: 136),
-        .init(imam: String(localized: "Hamzah"), narrators: String(localized: "Khalaf and Khallad"),
+        .init(imam: String(localized: "Hamzah"), narrators: String(localized: "Khalaf and Khallaad"),
               identical: 73959, percent: 95.51, differentWord: 48),
-        .init(imam: String(localized: "al-Kisai"), narrators: String(localized: "Abu al-Harith and ad-Duri"),
+        .init(imam: String(localized: "al-Kisaa’i"), narrators: String(localized: "Abu al-Haarith and ad-Doori"),
               identical: 77059, percent: 99.51, differentWord: 7),
-        .init(imam: String(localized: "Ya'qub"), narrators: String(localized: "Ruways and Rawh"),
+        .init(imam: String(localized: "Ya‘qoob"), narrators: String(localized: "Ruways and Rawh"),
               identical: 76959, percent: 99.39, differentWord: 77),
-        .init(imam: String(localized: "Abu Ja'far"), narrators: String(localized: "Ibn Wardan and Ibn Jammaz"),
+        .init(imam: String(localized: "Abu Ja‘far"), narrators: String(localized: "Ibn Wardaan and Ibn Jammaaz"),
               identical: 77400, percent: 99.97, differentWord: 5),
-        .init(imam: String(localized: "Khalaf al-Ashir"), narrators: String(localized: "Ishaq and Idris"),
+        .init(imam: String(localized: "Khalaf al-Aashir"), narrators: String(localized: "Ishaaq and Idrees"),
               identical: 77432, percent: 100.00, differentWord: 0),
     ]
 
     /// The counting traditions, in the order the table above uses them.
     static let countingTraditions: [(String, Int, String)] = [
-        ("Kufi", 6236, String(localized: "Asim, Hamzah, al-Kisai and Khalaf al-Ashir")),
-        ("Shami", 6226, String(localized: "Ibn Amir")),
-        ("Makki", 6220, String(localized: "Ibn Kathir")),
+        ("Koofi", 6236, String(localized: "Aasim, Hamzah, al-Kisaa’i and Khalaf al-Aashir")),
+        ("Shaami", 6226, String(localized: "Ibn Aamir")),
+        ("Makki", 6220, String(localized: "Ibn Katheer")),
         // The counts as al-Dani gives them: the earlier Madinan 6,217, the later 6,214 (the Maghribi
         // prints' own "al-Madani al-Akhir"), the Basran 6,204. Abu Amr's prints count al-Baqarah 285,
         // the Madinan figure (Basran 287), so their 6,217 is the earlier Madinan count.
         ("Madani al-Awwal", 6217, String(localized: "Abu Amr al-Basri")),
-        ("Madani al-Akhir", 6214, String(localized: "Nafi and Abu Ja'far")),
+        ("Madani al-Aakhir", 6214, String(localized: "Naafi and Abu Ja‘far")),
         ("Basri", 6204, String(localized: "Ruways; Rawh counts 6206")),
     ]
 
@@ -133,13 +133,13 @@ enum QiraatTextAnalysis {
     /// Meccan surah filter (مكية) and the Kufic script.
     static func countingTitle(_ name: String) -> String {
         switch name {
-        case "Kufi": return String(localized: "count.kufi", defaultValue: "Kufi")
-        case "Shami": return String(localized: "count.shami", defaultValue: "Shami")
+        case "Koofi": return String(localized: "count.kufi", defaultValue: "Koofi")
+        case "Shaami": return String(localized: "count.shami", defaultValue: "Shaami")
         case "Makki": return String(localized: "count.makki", defaultValue: "Makki")
         case "Basri": return String(localized: "count.basri", defaultValue: "Basri")
         case "Madani al-Awwal": return String(localized: "count.madaniAwwal", defaultValue: "Madani al-Awwal")
-        case "Madani al-Akhir": return String(localized: "count.madaniAkhir", defaultValue: "Madani al-Akhir")
-        case "Basri (Ya'qub)": return String(localized: "count.basriYaqub", defaultValue: "Basri (Ya'qub)")
+        case "Madani al-Aakhir": return String(localized: "count.madaniAkhir", defaultValue: "Madani al-Aakhir")
+        case "Basri (Ya‘qoob)": return String(localized: "count.basriYaqub", defaultValue: "Basri (Ya‘qoob)")
         default: return name.localizedDisplay
         }
     }
@@ -172,7 +172,7 @@ struct QiraatTextAnalysisView: View {
     private var disclaimerSection: some View {
         Section {
             ArticleCallout(paragraphs: [
-                String(localized: "This page is not a work of scholarship. It is the output of a program that read the printed mushaf of each riwayah, letter by letter, and compared it against Hafs an Asim. It may not be one hundred percent accurate."),
+                String(localized: "This page is not a work of scholarship. It is the output of a program that read the printed mushaf of each riwayah, letter by letter, and compared it against Hafs an Aasim. It may not be one hundred percent accurate."),
                 String(localized: "Everywhere else in this guide reports the settled record of the qurra: names, chains, dates, what each reading is known for. This page does not. It reports measurements, and a measurement can be wrong in ways a biography cannot: a mark misread off the page, two words joined where the print separated them, a rule applied one letter too wide."),
                 String(localized: "Nothing here is a ruling, and none of it replaces a qualified teacher or the classical works. Where a scholar disagrees with a number on this page, the scholar is right and the number is wrong."),
             ], title: String(localized: "Read This First"), systemImage: "exclamationmark.triangle.fill")
@@ -219,7 +219,7 @@ struct QiraatTextAnalysisView: View {
                     .foregroundColor(.secondary)
             }
 
-            Text("The two Madinan counts are named as al-Dani names them, the earlier 6,217 and the later 6,214; some books give the names the other way round. Abu Amr's printed mushafs follow the earlier Madinan count, not the Basran one.")
+            Text("The two Madinan counts are named as ad-Daani names them, the earlier 6,217 and the later 6,214; some books give the names the other way round. Abu Amr's printed mushafs follow the earlier Madinan count, not the Basran one.")
                 .font(.footnote)
                 .foregroundColor(.secondary)
 
@@ -229,7 +229,7 @@ struct QiraatTextAnalysisView: View {
     }
 
     private var againstHafsSection: some View {
-        Section(header: Text("EACH RIWAYAH AGAINST HAFS")) {
+        Section(header: Text("EACH RIWAAYAH AGAINST HAFS")) {
             Text("Reading across: how many of Hafs's 77,430 words this riwayah writes identically, how many it writes with the same skeleton but different vowelling, and how many are a different word form.")
                 .font(.footnote)
                 .foregroundColor(.secondary)
@@ -254,7 +254,7 @@ struct QiraatTextAnalysisView: View {
                 .padding(.vertical, 2)
             }
 
-            Text("The percentage is not a measure of how much of the Quran a riwayah shares with Hafs: it is a measure of how much of it is spelled identically in print. Ibn Wardan sits lowest at 63.86 percent because the Madani print writes almost every definite article differently, not because a third of his reading is different.")
+            Text("The percentage is not a measure of how much of the Quran a riwayah shares with Hafs: it is a measure of how much of it is spelled identically in print. Ibn Wardaan sits lowest at 63.86 percent because the Madani print writes almost every definite article differently, not because a third of his reading is different.")
                 .font(.footnote)
                 .foregroundColor(.secondary)
         }
@@ -286,7 +286,7 @@ struct QiraatTextAnalysisView: View {
                 .padding(.vertical, 2)
             }
 
-            Text("Nafi's two narrators are the furthest apart of any pair, and even there 85 percent of the words are spelled identically. At the other end, the printed texts of Ishaq and Idris are the same text.")
+            Text("Naafi's two narrators are the furthest apart of any pair, and even there 85 percent of the words are spelled identically. At the other end, the printed texts of Ishaaq and Idrees are the same text.")
                 .font(.footnote)
                 .foregroundColor(.secondary)
         }
@@ -294,12 +294,12 @@ struct QiraatTextAnalysisView: View {
 
     private var sharedSection: some View {
         Section(header: Text("WHAT ALL TWENTY SHARE")) {
-            bullet("The same rasm", "the consonantal skeleton of the copies Uthman sent to the cities. Every reading among the twenty agrees with it; where those copies differ by a letter or a word, as they do in a few dozen places, each reading agrees with one of them, which is exactly the point the copies were written to serve.")
+            bullet("The same rasm", "the consonantal skeleton of the copies Uthmaan sent to the cities. Every reading among the twenty agrees with it; where those copies differ by a letter or a word, as they do in a few dozen places, each reading agrees with one of them, which is exactly the point the copies were written to serve.")
             bullet("The same 114 surahs", "in the same order, with the same names and the same openings.")
             bullet("The same length", "77,424 to 77,468 words end to end.")
             bullet("The same subject matter, ayah for ayah", "the boundary disagreements move where a number is printed; no riwayah has an ayah another lacks.")
 
-            Text("Set against Hafs, the different-word bucket runs from 136 words (Shu'bah, who studied under the same teacher) to 1,561 (Ibn Wardan). Even the largest is two percent of the text, and every one of those words was transmitted, not chosen.")
+            Text("Set against Hafs, the different-word bucket runs from 136 words (Shu‘bah, who studied under the same teacher) to 1,561 (Ibn Wardaan). Even the largest is two percent of the text, and every one of those words was transmitted, not chosen.")
                 .font(.body)
         }
     }
@@ -310,13 +310,13 @@ struct QiraatTextAnalysisView: View {
                 .font(.body)
                 .fontWeight(.medium)
 
-            bullet("Sakt", "a brief pause without breathing. Hamzah and Khalaf al-Ashir are known for it; a print may mark it, may mark it inconsistently, or may not mark it.")
+            bullet("Sakt", "a brief pause without breathing. Hamzah and Khalaf al-Aashir are known for it; a print may mark it, may mark it inconsistently, or may not mark it.")
             bullet("Madd lengths", "how many counts a prolongation is held. Two riwayat can write a word identically and hold it for different lengths.")
             bullet("Degrees of imalah and taqlil", "how far a fathah is bent toward a kasrah is a matter of degree, and the sign for it is not standardised across prints.")
-            bullet("Idgham, ikhfa and ghunnah", "junction behaviour between words, only partly reflected in the writing.")
+            bullet("Idghaam, ikhfa and ghunnah", "junction behaviour between words, only partly reflected in the writing.")
             bullet("Where to stop and start", "waqf and ibtida, which belong to the recitation rather than to the text.")
 
-            Text("Khalaf al-Ashir is the clearest case. Ishaq and Idris come out of this comparison as one identical text, 77,432 words with not a single difference, and that is genuinely what the printed mushafs say. It does not mean the two transmissions are the same recitation. What separates them, and much of what separates Khalaf al-Ashir from Hamzah whose riwayah he himself narrated, lives in sakt, in stopping, and in the other recitation-level matters listed above. Ibn al-Jazari's al-Durrah records Khalaf al-Ashir's usul as differences from ash-Shatibiyyah for the same reason: the reading is defined by how it is recited, not only by how it is written.")
+            Text("Khalaf al-Aashir is the clearest case. Ishaaq and Idrees come out of this comparison as one identical text, 77,432 words with not a single difference, and that is genuinely what the printed mushafs say. It does not mean the two transmissions are the same recitation. What separates them, and much of what separates Khalaf al-Aashir from Hamzah whose riwayah he himself narrated, lives in sakt, in stopping, and in the other recitation-level matters listed above. Ibn al-Jazari's ad-Durrah records Khalaf al-Aashir's usul as differences from ash-Shaatibiyyah for the same reason: the reading is defined by how it is recited, not only by how it is written.")
                 .font(.body)
 
             Text("So read the tables as a comparison of printed texts, which is all they are, and never as a measure of how far apart two recitations sound.")
@@ -332,10 +332,10 @@ struct QiraatTextAnalysisView: View {
                 .foregroundColor(.secondary)
 
             reference("an-Nashr fi al-Qiraat al-Ashr", "Ibn al-Jazari (d. 833 AH). The standard reference for all ten readings and their chains.")
-            reference("ad-Durrah al-Mudiyyah", "Ibn al-Jazari. The three readings beyond the seven, Abu Ja'far, Ya'qub and Khalaf al-Ashir, recorded as their differences from ash-Shatibiyyah.")
-            reference("Hirz al-Amani (ash-Shatibiyyah)", "ash-Shatibi (d. 590 AH). The seven readings in verse; the reference every later work measures against.")
-            reference("al-Bayan fi Add Ay al-Quran", "ad-Dani (d. 444 AH). The classical treatment of ayah counting and why the traditions differ.")
-            reference("Kitab Adad Ay al-Quran", "al-Antaki (d. 377 AH). The agreed and disputed ayah counts of the Makki, Madani, Kufi, Basri and Shami traditions.")
+            reference("ad-Durrah al-Mudiyyah", "Ibn al-Jazari. The three readings beyond the seven, Abu Ja‘far, Ya‘qoob and Khalaf al-Aashir, recorded as their differences from ash-Shaatibiyyah.")
+            reference("Hirz al-Amaani (ash-Shaatibiyyah)", "ash-Shaatibi (d. 590 AH). The seven readings in verse; the reference every later work measures against.")
+            reference("al-Bayaan fi Add Ay al-Quran", "ad-Daani (d. 444 AH). The classical treatment of ayah counting and why the traditions differ.")
+            reference("Kitaab Adad Ay al-Quran", "al-Antaaki (d. 377 AH). The agreed and disputed ayah counts of the Makki, Madani, Koofi, Basri and Shaami traditions.")
 
             Link(destination: QiraatProfiles.sourceURL) {
                 HStack {

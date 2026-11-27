@@ -177,14 +177,14 @@ struct IslamView: View {
             case .tajweedCourse: return "Tajweed Course"
             case .commonAdhkar: return "Dhikr & Remembrances"
             case .commonDuas: return "Dua & Supplications"
-            case .tasbihCounter: return "Tasbih Counter"
-            case .zakahCalculator: return "Zakah Calculator"
+            case .tasbihCounter: return "Tasbeeh Counter"
+            case .zakahCalculator: return "Zakaah Calculator"
             case .inheritanceCalculator: return "Inheritance Calculator"
             case .namesOfAllah: return "99 Names of Allah"
             case .hijriCalendarConverter: return "Hijri Date Converter"
             #if HAS_ADHAN
             case .masjidLocator: return "Masjid Locator"
-            case .halalFoodLocator: return "Halal Food Locator"
+            case .halalFoodLocator: return "Halaal Food Locator"
             #endif
             case .islamicWallpapers: return "Islamic Wallpapers"
             case .pillarsAndBasics: return "Pillars & Beliefs"
@@ -195,7 +195,7 @@ struct IslamView: View {
             case .sunnahsOfProphet: return "Sunnahs of the Prophet"
             case .provingIslam: return "Proving Islam"
             case .prophetStories: return "Stories of the Prophets"
-            case .sahabahAndSalaf: return "Sahabah, Ahlul Bayt & Salaf"
+            case .sahabahAndSalaf: return "Sahaabah, Ahlul Bayt & Salaf"
             case .quranPreservation: return "Preservation of the Quran"
             case .hadithScience: return "Science of Hadith"
             case .refutingReligions: return "Refuting Religions"
@@ -214,14 +214,14 @@ struct IslamView: View {
             case .tajweedCourse: return String(localized: "Tajweed Course")
             case .commonAdhkar: return String(localized: "Dhikr & Remembrances")
             case .commonDuas: return String(localized: "Dua & Supplications")
-            case .tasbihCounter: return String(localized: "Tasbih Counter")
-            case .zakahCalculator: return String(localized: "Zakah Calculator")
+            case .tasbihCounter: return String(localized: "Tasbeeh Counter")
+            case .zakahCalculator: return String(localized: "Zakaah Calculator")
             case .inheritanceCalculator: return String(localized: "Inheritance Calculator")
             case .namesOfAllah: return String(localized: "99 Names of Allah")
             case .hijriCalendarConverter: return String(localized: "Hijri Date Converter")
             #if HAS_ADHAN
             case .masjidLocator: return String(localized: "Masjid Locator")
-            case .halalFoodLocator: return String(localized: "Halal Food Locator")
+            case .halalFoodLocator: return String(localized: "Halaal Food Locator")
             #endif
             case .islamicWallpapers: return String(localized: "Islamic Wallpapers")
             case .pillarsAndBasics: return String(localized: "Pillars & Beliefs")
@@ -232,7 +232,7 @@ struct IslamView: View {
             case .sunnahsOfProphet: return String(localized: "Sunnahs of the Prophet")
             case .provingIslam: return String(localized: "Proving Islam")
             case .prophetStories: return String(localized: "Stories of the Prophets")
-            case .sahabahAndSalaf: return String(localized: "Sahabah, Ahlul Bayt & Salaf")
+            case .sahabahAndSalaf: return String(localized: "Sahaabah, Ahlul Bayt & Salaf")
             case .quranPreservation: return String(localized: "Preservation of the Quran")
             case .hadithScience: return String(localized: "Science of Hadith")
             case .refutingReligions: return String(localized: "Refuting Religions")
@@ -292,17 +292,17 @@ struct IslamView: View {
             case .hijriCalendarConverter: return "Convert Hijri and Gregorian dates"
             #if HAS_ADHAN
             case .masjidLocator: return "Find mosques near you"
-            case .halalFoodLocator: return "Find halal food near you"
+            case .halalFoodLocator: return "Find halaal food near you"
             #endif
             case .islamicWallpapers: return "Beautiful wallpapers to save"
             case .pillarsAndBasics: return "The Five Pillars and Six Beliefs"
-            case .howToGuides: return "Wudu, salah, Jumuah, and more"
+            case .howToGuides: return "Wudu, salaah, Jumuah, and more"
             case .miraclesOfQuran: return "Signs in creation, science, and history"
             case .propheciesOfProphet: return "What he foretold, and what history did"
             case .miraclesOfProphets: return "The signs given to the prophets, and to him"
             case .sunnahsOfProphet: return "What he did each day, from waking to sleeping"
             case .provingIslam: return "The complete case that Islam is true, one line of evidence at a time"
-            case .prophetStories: return "From Adam to Isa, told from the Quran and sound hadith"
+            case .prophetStories: return "From Aadam to Eesa, told from the Quran and sound hadith"
             case .sahabahAndSalaf: return "The Companions, the Prophet\u{2019}s household, and the early generations"
             case .quranPreservation: return "How the Quran was revealed, memorised, written, and kept"
             case .hadithScience: return "How every narration is checked, graded, and preserved"
@@ -330,17 +330,17 @@ struct IslamView: View {
             case .hijriCalendarConverter: return String(localized: "Convert Hijri and Gregorian dates")
             #if HAS_ADHAN
             case .masjidLocator: return String(localized: "Find mosques near you")
-            case .halalFoodLocator: return String(localized: "Find halal food near you")
+            case .halalFoodLocator: return String(localized: "Find halaal food near you")
             #endif
             case .islamicWallpapers: return String(localized: "Beautiful wallpapers to save")
             case .pillarsAndBasics: return String(localized: "The Five Pillars and Six Beliefs")
-            case .howToGuides: return String(localized: "Wudu, salah, Jumuah, and more")
+            case .howToGuides: return String(localized: "Wudu, salaah, Jumuah, and more")
             case .miraclesOfQuran: return String(localized: "Signs in creation, science, and history")
             case .propheciesOfProphet: return String(localized: "What he foretold, and what history did")
             case .miraclesOfProphets: return String(localized: "The signs given to the prophets, and to him")
             case .sunnahsOfProphet: return String(localized: "What he did each day, from waking to sleeping")
             case .provingIslam: return String(localized: "The complete case that Islam is true, one line of evidence at a time")
-            case .prophetStories: return String(localized: "From Adam to Isa, told from the Quran and sound hadith")
+            case .prophetStories: return String(localized: "From Aadam to Eesa, told from the Quran and sound hadith")
             case .sahabahAndSalaf: return String(localized: "The Companions, the Prophet\u{2019}s household, and the early generations")
             case .quranPreservation: return String(localized: "How the Quran was revealed, memorised, written, and kept")
             case .hadithScience: return String(localized: "How every narration is checked, graded, and preserved")
@@ -368,14 +368,14 @@ struct IslamView: View {
             case .tajweedCourse: return String(localized: "Tajweed\nCourse")
             case .commonAdhkar: return String(localized: "Dhikr &\nRemembrances")
             case .commonDuas: return String(localized: "Dua &\nSupplications")
-            case .tasbihCounter: return String(localized: "Tasbih\nCounter")
-            case .zakahCalculator: return String(localized: "Zakah\nCalculator")
+            case .tasbihCounter: return String(localized: "Tasbeeh\nCounter")
+            case .zakahCalculator: return String(localized: "Zakaah\nCalculator")
             case .inheritanceCalculator: return String(localized: "Inheritance\nCalculator")
             case .namesOfAllah: return String(localized: "99 Names\nof Allah")
             case .hijriCalendarConverter: return String(localized: "Hijri Date\nConverter")
             #if HAS_ADHAN
             case .masjidLocator: return String(localized: "Masjid\nLocator")
-            case .halalFoodLocator: return String(localized: "Halal Food\nLocator")
+            case .halalFoodLocator: return String(localized: "Halaal Food\nLocator")
             #endif
             case .islamicWallpapers: return String(localized: "Islamic\nWallpapers")
             case .pillarsAndBasics: return String(localized: "Pillars &\nBeliefs")
@@ -386,7 +386,7 @@ struct IslamView: View {
             case .sunnahsOfProphet: return String(localized: "Sunnahs of\nthe Prophet")
             case .provingIslam: return String(localized: "Proving\nIslam")
             case .prophetStories: return String(localized: "Stories of\nthe Prophets")
-            case .sahabahAndSalaf: return String(localized: "Sahabah, Ahlul\nBayt & Salaf")
+            case .sahabahAndSalaf: return String(localized: "Sahaabah, Ahlul\nBayt & Salaf")
             case .quranPreservation: return String(localized: "Preservation\nof the Quran")
             case .hadithScience: return String(localized: "Science of\nHadith")
             case .refutingReligions: return String(localized: "Refuting\nReligions")
@@ -1907,12 +1907,12 @@ struct IslamView: View {
                 DuaView()
             }
 
-            resourceLink(title: String(localized: "Tasbih Counter"), systemImage: "circles.hexagonpath.fill") {
+            resourceLink(title: String(localized: "Tasbeeh Counter"), systemImage: "circles.hexagonpath.fill") {
                 TasbihView()
             }
 
             #if os(iOS)
-            resourceLink(title: String(localized: "Zakah Calculator"), systemImage: "percent") {
+            resourceLink(title: String(localized: "Zakaah Calculator"), systemImage: "percent") {
                 ZakahCalculatorView()
             }
 
@@ -1935,7 +1935,7 @@ struct IslamView: View {
                 PlaceLocatorView(profile: .masjid)
             }
 
-            resourceLink(title: String(localized: "Halal Food Locator"), systemImage: "fork.knife") {
+            resourceLink(title: String(localized: "Halaal Food Locator"), systemImage: "fork.knife") {
                 PlaceLocatorView(profile: .halalFood)
             }
             #endif
@@ -2340,8 +2340,8 @@ struct ProphetQuote: View {
     private let quoteText = "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a white man over a black man, nor of a black man over a white man, except by taqwa (piety, righteousness, and God-consciousness).”"
     // 23489 is the ar-Risalah edition's number, the numbering the app's Musnad Ahmad follows since it
     // carries the whole book (2026-11-10), so "ahmad 23489" in the Hadith tab opens this narration.
-    private let attributionText1 = String(localized: "Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)")
-    private let attributionText2 = String(localized: "Mina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE")
+    private let attributionText1 = String(localized: "Farewell Pilgrimage\nMusnad Ahmad 23489 (saheeh, al-Albaani)")
+    private let attributionText2 = String(localized: "Mina, the middle day of Tashreeq\n12 Dhul-Hijjah 10 AH, March 632 CE")
 
     var body: some View {
         Section(header: SectionIconHeader(String(localized: "PROPHET MUHAMMAD ﷺ QUOTE"), icon: "quote.opening")) {
@@ -2377,7 +2377,7 @@ struct ProphetQuote: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    UIPasteboard.general.string = "O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a white man over a black man, nor of a black man over a white man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)\n\nMina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE"
+                    UIPasteboard.general.string = "O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a white man over a black man, nor of a black man over a white man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Pilgrimage\nMusnad Ahmad 23489 (saheeh, al-Albaani)\n\nMina, the middle day of Tashreeq\n12 Dhul-Hijjah 10 AH, March 632 CE"
                 } label: {
                     Label("Copy Text", systemImage: "doc.on.doc")
                 }

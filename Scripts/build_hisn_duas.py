@@ -15,6 +15,9 @@ Usage: python3 Scripts/build_hisn_duas.py [/path/to/Tilawa]
 """
 import json, lzma, os, re, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from transliteration import restyle_hisn  # noqa: E402
+
 TILAWA = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/Downloads/Islam/Tilawa")
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "Resources", "Data", "Islam", "HisnDuas.json.xz")
@@ -63,6 +66,8 @@ def main():
                      "benefits": strip(e["benefits"]), "repeat": e["repeat"], "reference": strip(e["reference"]),
                      "audio": audio.get(e["id"], "")} for e in ents],
     }
+    # the Islam tab's one transliteration style (Scripts/transliteration.py)
+    root = restyle_hisn(root)
     raw = json.dumps(root, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     with open(OUT, "wb") as f:
         f.write(lzma.compress(raw, preset=9))

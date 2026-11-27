@@ -320,10 +320,10 @@ struct NameShareSheet: View {
     private var optionsMenu: some View {
         Menu {
             Picker("Arabic Font", selection: shareFaceBinding) {
-                Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
+                Text("Uthmaani").tag(Settings.IslamArabicFace.uthmani)
                 Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
-                Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
-                Text("Kufi").tag(Settings.IslamArabicFace.kufi)
+                Text("Hijaazi").tag(Settings.IslamArabicFace.hijazi)
+                Text("Koofi").tag(Settings.IslamArabicFace.kufi)
                 Text("Basic").tag(Settings.IslamArabicFace.basic)
             }
             .pickerStyle(.menu)

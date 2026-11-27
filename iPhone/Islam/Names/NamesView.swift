@@ -504,7 +504,9 @@ struct NamesView: View {
         let texts = names.map { "\($0.transliteration) \($0.meaning) \($0.otherNames.joined(separator: " ")) \($0.desc)" }
         // Keyed by the name's number, so index -> name resolution survives any reorder of the source.
         let keys = names.map { String($0.number) }
-        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+        // v3 (2026-11-26): the transliterations were respelled to the house style, long vowels doubled
+        // (Scripts/transliteration.py), so an earlier build in Caches holds stale texts and keys.
+        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v3-\(texts.count)", texts: texts, keys: keys)
     }
 
     private func runAISearch(query: String) {
@@ -865,7 +867,7 @@ struct NamesView: View {
     }
 
     private static var namesDisclaimerText: String {
-        var text = String(localized: "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. The hadith does not limit His names to ninety-nine: the Prophet ﷺ asked Allah by every name He has, including those He kept in the knowledge of the unseen with Himself (Musnad Ahmad 3712, graded sahih by al-Albani).")
+        var text = String(localized: "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhaari 6410). The count is established in Bukhaari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. The hadith does not limit His names to ninety-nine: the Prophet ﷺ asked Allah by every name He has, including those He kept in the knowledge of the unseen with Himself (Musnad Ahmad 3712, graded saheeh by al-Albaani).")
         #if HAS_QURAN
         text += " " + String(localized: "Names marked as coming from that list do not appear as names in the Quran.")
         #endif

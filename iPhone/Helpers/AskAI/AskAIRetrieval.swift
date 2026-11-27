@@ -1251,7 +1251,7 @@ enum AskAIRetriever {
                 found = exactMatch(word)
             }
             if found == nil, cued, word.count >= 4 {
-                found = cuedNameKeys(for: names)[word]
+                found = cuedNameKeys(for: names)[singleVowels(word)]
             }
             if let found, !out.contains(found) { out.append(found) }
         }
@@ -1267,11 +1267,19 @@ enum AskAIRetriever {
         for name in names {
             var parts = AskAILexicon.fold(name.transliteration).split(separator: " ").map(String.init)
             if let first = parts.first, nameArticles.contains(first) { parts.removeFirst() }
-            let key = parts.joined(separator: " ")
+            let key = singleVowels(parts.joined(separator: " "))
             if keys[key] == nil { keys[key] = name }
         }
         cuedNameKeyCache = (names.count, keys)
         return keys
+    }
+
+    /// A word with its long vowels single: the Names are written Al-Azeez and Al-Wadood (the Islam tab's
+    /// house style, Scripts/transliteration.py), and a question writes "aziz" or "azeez" alike.
+    private static func singleVowels(_ word: String) -> String {
+        word.replacingOccurrences(of: "ee", with: "i")
+            .replacingOccurrences(of: "oo", with: "u")
+            .replacingOccurrences(of: "aa", with: "a")
     }
 
     private static func nameSources(for question: AskAIQuestion, limit: Int) -> [AskAISource] {

@@ -273,7 +273,7 @@ enum Faraid {
             if paternalSisters > 0 { blocked.append((.paternalSisters, reason)) }
             fullBrothers = 0; fullSisters = 0; paternalBrothers = 0; paternalSisters = 0
             if hasGrandfather && !hasFather && siblingHeadCount > n(.maternalSiblings) {
-                notes.append(String(localized: "Siblings alongside a grandfather is a genuine difference among the Companions. Abu Bakr shut them out, and Ibn ‘Abbas, ‘A’ishah and later Ibn Taymiyyah held the same; that is the view applied here. Zayd ibn Thabit divided the estate between them instead, and Malik, ash-Shafi‘i and Ahmad followed him, so a court may well answer differently. Take an estate with both to a scholar."))
+                notes.append(String(localized: "Siblings alongside a grandfather is a genuine difference among the Companions. Abu Bakr shut them out, and Ibn Abbaas, Aa’ishah and later Ibn Taymiyyah held the same; that is the view applied here. Zayd ibn Thaabit divided the estate between them instead, and Maalik, ash-Shaafi‘i and Ahmad followed him, so a court may well answer differently. Take an estate with both to a scholar."))
             }
         }
         if maternalBlocked && maternalSiblings > 0 {
@@ -366,8 +366,8 @@ enum Faraid {
         if grandmothers > 0 {
             let each = Fraction(1, 6) / Fraction(grandmothers)
             let basis = grandmothers == 1
-                ? String(localized: "1/6 as grandmother (by consensus: Ibn al-Mundhir, al-Ijma')")
-                : String(localized: "1/6 shared between the two grandmothers (by consensus: Ibn al-Mundhir, al-Ijma')")
+                ? String(localized: "1/6 as grandmother (by consensus: Ibn al-Mundhir, al-Ijmaa')")
+                : String(localized: "1/6 shared between the two grandmothers (by consensus: Ibn al-Mundhir, al-Ijmaa')")
             if maternalGrandmother { fard[.maternalGrandmother] = (each, basis) }
             if paternalGrandmother { fard[.paternalGrandmother] = (each, basis) }
         }
@@ -445,13 +445,13 @@ enum Faraid {
         if onlySpouseAndParents {
             let spouseShare = (fard[.husband]?.share ?? .zero) + (fard[.wives]?.share ?? .zero)
             let remainder = Fraction.one - spouseShare
-            fard[.mother] = (remainder * Fraction(1, 3), String(localized: "1/3 of what remains after the spouse (the ‘Umariyyatan)"))
+            fard[.mother] = (remainder * Fraction(1, 3), String(localized: "1/3 of what remains after the spouse (the Umariyyataan)"))
         }
         // The same family with the grandfather in the father's place is NOT the ‘Umariyyatan: the
         // mother takes a third of the whole estate, because the rule is about the father himself.
         if hasGrandfather && hasMother && !hasDescendant && siblingHeadCount < 2
             && (n(.husband) > 0 || n(.wives) > 0) {
-            notes.append(String(localized: "With the grandfather standing in the father's place the mother takes a third of the WHOLE estate, not a third of what remains after the spouse: the ‘Umariyyatan rule is about the father himself. Malik, ash-Shafi‘i and Ahmad read it that way; Abu Hanifa applied the rule to the grandfather too."))
+            notes.append(String(localized: "With the grandfather standing in the father's place the mother takes a third of the WHOLE estate, not a third of what remains after the spouse: the Umariyyataan rule is about the father himself. Maalik, ash-Shaafi‘i and Ahmad read it that way; Abu Haneefah applied the rule to the grandfather too."))
         }
 
         // ---- 4. Residue to the nearest residuary (‘asabah) ----
@@ -505,7 +505,7 @@ enum Faraid {
         // It needs a full BROTHER: he is the residuary left with nothing. Full sisters alone hold
         // fixed shares of their own, and that estate is an ordinary ‘awl, not this case.
         if maternalSiblings >= 2 && fullBrothers > 0 && !(residue > .zero) {
-            notes.append(String(localized: "This is the case the scholars call al-Mushtarakah. The fixed shares leave nothing for the full siblings while the maternal half-siblings take their third. ‘Umar first ruled exactly that, and Abu Hanifa and Ahmad kept it, which is what is shown here. ‘Umar later shared the third among them all, and Malik and ash-Shafi‘i followed that. Take a real case to a scholar."))
+            notes.append(String(localized: "This is the case the scholars call al-Mushtarakah. The fixed shares leave nothing for the full siblings while the maternal half-siblings take their third. Umar first ruled exactly that, and Abu Haneefah and Ahmad kept it, which is what is shown here. Umar later shared the third among them all, and Maalik and ash-Shaafi‘i followed that. Take a real case to a scholar."))
         }
 
         // ---- 5. ‘Awl and radd ----
@@ -541,7 +541,7 @@ enum Faraid {
                 notes.append(String(localized: "Nobody is left to take the residue, so it returns to the fixed-share heirs in proportion to their shares (radd). A spouse does not share in the return."))
             } else {
                 unclaimed = residue
-                notes.append(String(localized: "No heir in this calculator can take the remaining share. In classical law it passes to the relatives who inherit by kinship (dhawu al-arham: a daughter's children, a sister's children, a maternal uncle) and, failing them, to the public treasury. Most courts today give it to the spouse when there is nobody else at all."))
+                notes.append(String(localized: "No heir in this calculator can take the remaining share. In classical law it passes to the relatives who inherit by kinship (dhawu al-arhaam: a daughter's children, a sister's children, a maternal uncle) and, failing them, to the public treasury. Most courts today give it to the spouse when there is nobody else at all."))
             }
         }
 
@@ -737,7 +737,7 @@ struct InheritanceCalculatorView: View {
                 if shows("heirs") {
                 heirSection(String(localized: "SPOUSE"), heirs: [.husband, .wives])
                 heirSection(String(localized: "PARENTS & GRANDPARENTS"), heirs: [.father, .mother, .grandfather, .maternalGrandmother, .paternalGrandmother],
-                            footer: String(localized: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother (the view of Malik, ash-Shafi'i and Abu Hanifa; Ahmad, in one of his two reports, let her inherit beside her son)."))
+                            footer: String(localized: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother (the view of Maalik, ash-Shaafi‘i and Abu Haneefah; Ahmad, in one of his two reports, let her inherit beside her son)."))
                 heirSection(String(localized: "CHILDREN & GRANDCHILDREN"), heirs: [.sons, .daughters, .grandsons, .granddaughters],
                             footer: String(localized: "Son's sons and son's daughters inherit only when there is no surviving son."))
                 heirSection(String(localized: "SIBLINGS"), heirs: [.fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters, .maternalSiblings],
@@ -843,7 +843,7 @@ struct InheritanceCalculatorView: View {
                 }
 
                 if bequestOverThird {
-                    Label(String(localized: "A bequest above a third of the estate binds nobody unless the heirs agree to it, so only \(formattedAmount(bequestCap)) is applied here. \"A third, and a third is a lot\" (al-Bukhari 2744).").localizedDigits, systemImage: "exclamationmark.triangle")
+                    Label(String(localized: "A bequest above a third of the estate binds nobody unless the heirs agree to it, so only \(formattedAmount(bequestCap)) is applied here. \"A third, and a third is a lot\" (al-Bukhaari 2744).").localizedDigits, systemImage: "exclamationmark.triangle")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -912,7 +912,7 @@ struct InheritanceCalculatorView: View {
 
                 ExplainerButton(
                     title: String(localized: "Who counts as a wider relative"),
-                    body_: String(localized: "Half here always means through the father: a maternal half-brother's sons and a maternal uncle are not among these residuaries. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives."),
+                    body_: String(localized: "Half here always means through the father: a maternal half-brother's sons and a maternal uncle are not among these residuaries. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arhaam, once nobody above them survives."),
                     caption: String(localized: "Half always means through the father.")
                 )
             }
@@ -1141,11 +1141,11 @@ struct InheritanceCalculatorView: View {
 
     static let scopeLead = String(localized: "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَولَـٰدِكُم \"Allah instructs you concerning your children\" (4:11), and the verses close with تِلكَ حُدُودُ ٱللَّهِ \"these are the limits set by Allah\" (4:13).")
 
-    static let scopeBarriers = String(localized: "Two things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth.")
+    static let scopeBarriers = String(localized: "Two things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhaari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth.")
 
     static let scopeCaution = String(localized: "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings.")
 
-    static let scopeClosing = String(localized: "Inheritance is a branch of knowledge whose shares Allah Himself set out in detail, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers.")
+    static let scopeClosing = String(localized: "Inheritance is a branch of knowledge whose shares Allah Himself set out in detail, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaa‘ah, and to a court where one is needed, before anything is divided on these numbers.")
 }
 
 #Preview {

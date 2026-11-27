@@ -340,10 +340,10 @@ final class AppLinkTests: XCTestCase {
     /// never move; every dhikr has its own id and names where it comes from.
     func testTheDhikrListKeepsItsOrderAndCitesEachOne() {
         XCTAssertEqual(Array(commonDhikrItems.prefix(9)).map(\.transliteration), [
-            "SubhanAllah", "Alhamdulillah", "Allahu Akbar", "La ilaha illallah", "Astaghfirullah",
-            "La hawla wala quwwata illa billah", "SubhanAllahi wa bihamdihi, SubhanAllahil Adheem",
-            "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad",
-            "La ilaha illallah wahdahu la sharika lah, lahul-mulk wa lahul-hamd, wa huwa 'ala kulli shayin qadir",
+            "SubhaanAllah", "Alhamdulillah", "Allahu Akbar", "La ilaaha illallah", "Astaghfirullah",
+            "La hawla wala quwwata illa billah", "SubhaanAllahi wa bihamdihi, SubhaanAllahil-‘Azeem",
+            "Allahumma salli ‘ala Muhammad wa ‘ala aali Muhammad",
+            "La ilaaha illallah wahdahu la shareeka lah, lahul-mulk wa lahul-hamd, wa huwa ‘ala kulli shay’in qadeer",
         ])
         XCTAssertGreaterThan(commonDhikrItems.count, 20)
         XCTAssertEqual(Set(commonDhikrItems.map(\.id)).count, commonDhikrItems.count)
@@ -404,7 +404,7 @@ final class AppLinkTests: XCTestCase {
         }
         let sukoon = try XCTUnwrap(IslamArticles.all.first { $0.id == TajweedTopic.sukoon.articleID })
         XCTAssertTrue(sukoon.translatedForSearch().sections.contains {
-            $0.landing == String(localized: "The 4 Types of Sukoon Marks in the Qur\u{2019}an")
+            $0.landing == String(localized: "The 4 Types of Sukoon Marks in the Quran")
         })
     }
 

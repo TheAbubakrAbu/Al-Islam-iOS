@@ -899,7 +899,7 @@ final class DailyReminderResolver: ObservableObject {
             id: "ayah-of-the-day-\(ref.surahID)-\(ref.ayahID)", kind: .ayah,
             arabic: "", transliteration: nil,
             short: ayah.textEnglishSaheeh, english: "",
-            source: "Qur'an \(ref.surahID):\(ref.ayahID) · \(surah.nameTransliteration)",
+            source: "Quran \(ref.surahID):\(ref.ayahID) · \(surah.nameTransliteration)",
             target: "ayah:\(ref.surahID):\(ref.ayahID)", surah: ref.surahID, ayah: ref.ayahID,
             repeatCount: nil, hadith: nil))
     }
@@ -1059,10 +1059,10 @@ enum ReminderSource {
         case .ayah:
             #if HAS_QURAN
             if let surah, let ayah {
-                let prefix = "Qur'an \(surah):\(ayah) · "
+                let prefix = "Quran \(surah):\(ayah) · "
                 if stored.hasPrefix(prefix) {
                     let name = Surah.displayName(id: surah, stored: String(stored.dropFirst(prefix.count)))
-                    return String(localized: "Qur'an \(surah):\(ayah) · \(name)")
+                    return String(localized: "Quran \(surah):\(ayah) · \(name)")
                 }
             }
             #endif

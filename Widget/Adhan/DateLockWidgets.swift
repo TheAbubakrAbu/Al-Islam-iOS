@@ -9,7 +9,8 @@ import WidgetKit
 //
 // Arabic is one kind per layout rather than a setting: a lock-screen widget can't be configured without an
 // App Intent, and a separate kind puts both languages in the gallery at once. Only the Hijri-alone widget
-// has an Arabic twin. The two-calendar and next-prayer layouts follow the interface's language instead
+// has an Arabic twin, and only it has the inline size of a Hijri date: the two-calendar widget's inline
+// line was the same text, so it is rectangular only. The two-calendar and next-prayer layouts follow the interface's language instead
 // (`Language.interface`): their other lines (the weekday, the Gregorian date, the next prayer) are already
 // in it, and a half-English tile in an Arabic interface read worse than either language whole.
 
@@ -175,48 +176,37 @@ struct HijriInlineDate: View {
 
 // MARK: - Hijri and Gregorian together
 
-/// Rectangular: the clock's weekday, the Hijri date, the Gregorian date. Inline: the Hijri date alone
-/// ("23 Rabi al-Awwal 1448 AH") - the civil date it is paired with is already on the lock screen's own
-/// date line, immediately beside this slot.
+/// Rectangular only: the clock's weekday, the Hijri date, the Gregorian date.
+///
+/// It had an inline size until 2026-11-26, and that size was the Hijri Date widget's inline line letter
+/// for letter (Abu: "The two Hijri calendar lock screen widgets are the exact same lol"). It could not be
+/// anything else: the inline slot sits beside the lock screen's own date line, which already shows the
+/// civil date ("Wed 7"), so its Gregorian half was dropped on 2026-10-07 (it said the date twice and
+/// clipped the line), and what was left was the Hijri date alone. The inline slot now lists only the
+/// widgets that differ there: the Hijri date in English, in Arabic, and the next prayer.
 @available(iOS 16.0, *)
 struct DualCalendarLockView: View {
-    @Environment(\.widgetFamily) private var systemWidgetFamily
-    @Environment(\.previewWidgetFamily) private var previewWidgetFamily
-    private var widgetFamily: WidgetFamily { previewWidgetFamily ?? systemWidgetFamily }
-
     var entry: PrayersProvider.Entry
 
     var body: some View {
         let hijri = AdhanWidgetDateFormatting.hijriParts(for: entry, language: .interface)
 
-        if widgetFamily == .accessoryInline {
-            // The Hijri date ALONE, and no symbol. The inline slot does not stand on its own: it sits
-            // beside the lock screen's own date line, which is already showing the civil date ("Wed 7").
-            // Printing a Gregorian date here said it twice ("Wed 7  26 Rabi al-Thani · Oct 7", Abu
-            // 2026-10-07) and the extra width is what clips the line - the system truncates the pair from
-            // the leading edge, so the duplicate pushed the part worth reading off the screen. The Hijri
-            // date is the only thing in this widget the system line cannot say, so it gets the whole slot;
-            // a symbol would spend 1-2 characters of that width restating "date" next to a visible date.
-            // The two calendars still read as a pair: the slot opens on Calendar's middle dot.
-            HijriInlineDate(parts: hijri, joinsSystemDate: !entry.isPreview)
-        } else {
-            VStack(alignment: .leading, spacing: 1) {
-                // The weekday the clock is on (`entry.date`): the Hijri day may already have turned at
-                // Maghrib, the civil one has not, and this line sits over both.
-                Text(AdhanWidgetDateFormatting.gregorianWeekdayFormatter.string(from: entry.date))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 1) {
+            // The weekday the clock is on (`entry.date`): the Hijri day may already have turned at
+            // Maghrib, the civil one has not, and this line sits over both.
+            Text(AdhanWidgetDateFormatting.gregorianWeekdayFormatter.string(from: entry.date))
+                .font(.caption)
+                .foregroundColor(.secondary)
 
-                Text(hijri.dayMonthYear)
-                    .font(.subheadline.weight(.semibold))
+            Text(hijri.dayMonthYear)
+                .font(.subheadline.weight(.semibold))
 
-                Text(AdhanWidgetDateFormatting.gregorianLongFormatter.string(from: entry.date))
-                    .font(.caption)
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(AdhanWidgetDateFormatting.gregorianLongFormatter.string(from: entry.date))
+                .font(.caption)
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -229,9 +219,10 @@ struct DualCalendarLockWidget: Widget {
             DualCalendarLockView(entry: entry)
                 .widgetContainerBackground(accessory: true)
         }
-        .supportedFamilies([.accessoryRectangular, .accessoryInline])
+        // No inline size: there it was the Hijri Date widget's line exactly (see `DualCalendarLockView`).
+        .supportedFamilies([.accessoryRectangular])
         .configurationDisplayName("Hijri & Gregorian")
-        .description("Today's date in both calendars; the inline size shows the Hijri date beside the date above the clock")
+        .description("Today's date in both calendars")
     }
 }
 

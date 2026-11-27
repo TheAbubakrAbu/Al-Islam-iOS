@@ -32,58 +32,58 @@ struct CommonDhikr: Identifiable {
 /// The second group (Abu, 2026-11-24: "More dhikr") is the Sunnah's best-known remembrances, each
 /// from a sahih or hasan narration, spelled in the same style as the first nine.
 let commonDhikrItems: [CommonDhikr] = [
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah",
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ", transliteration: "SubhaanAllah", translation: "Glory be to Allah",
                 source: "Muslim 2698"),
     CommonDhikr(arabicText: "ٱلحَمدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "Praise be to Allah",
                 source: "Muslim 223"),
     CommonDhikr(arabicText: "اللَّهُ أَكبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest",
                 source: "Muslim 597"),
-    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ", transliteration: "La ilaha illallah", translation: "There is no deity worthy of worship except Allah",
+    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ", transliteration: "La ilaaha illallah", translation: "There is no deity worthy of worship except Allah",
                 source: "Tirmidhi 3383, hasan"),
     CommonDhikr(arabicText: "أَستَغفِرُ اللَّهَ", transliteration: "Astaghfirullah", translation: "I seek forgiveness from Allah",
                 source: "Muslim 591"),
     CommonDhikr(arabicText: "لَا حَولَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", transliteration: "La hawla wala quwwata illa billah", translation: "There is no power or might except with Allah",
-                source: "Bukhari 6384; Muslim 2704"),
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ سُبحَانَ اللَّهِ العَظِيمِ", transliteration: "SubhanAllahi wa bihamdihi, SubhanAllahil Adheem", translation: "Glory be to Allah and praise be to Him; Glory be to Allah, the Most Great",
-                source: "Bukhari 6682; Muslim 2694"),
-    CommonDhikr(arabicText: "اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ", transliteration: "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad", translation: "O Allah, send blessings upon Muhammad and his family",
-                source: "Bukhari 3370"),
-    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ وَحدَهُ لَا شَرِيكَ لَهُ لَهُ ٱلمُلكُ وَلَهُ ٱلحَمدُ وَهُوَ عَلَىٰ كُلِّ شَيءٍ قَدِيرٌ", transliteration: "La ilaha illallah wahdahu la sharika lah, lahul-mulk wa lahul-hamd, wa huwa 'ala kulli shayin qadir", translation: "There is no deity worthy of worship except Allah, alone, without any partner. His is the sovereignty and His is the praise, and He is capable of all things",
-                source: "Bukhari 6403; Muslim 2691"),
+                source: "Bukhaari 6384; Muslim 2704"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ سُبحَانَ اللَّهِ العَظِيمِ", transliteration: "SubhaanAllahi wa bihamdihi, SubhaanAllahil-‘Azeem", translation: "Glory be to Allah and praise be to Him; Glory be to Allah, the Most Great",
+                source: "Bukhaari 6682; Muslim 2694"),
+    CommonDhikr(arabicText: "اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ", transliteration: "Allahumma salli ‘ala Muhammad wa ‘ala aali Muhammad", translation: "O Allah, send blessings upon Muhammad and his family",
+                source: "Bukhaari 3370"),
+    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ وَحدَهُ لَا شَرِيكَ لَهُ لَهُ ٱلمُلكُ وَلَهُ ٱلحَمدُ وَهُوَ عَلَىٰ كُلِّ شَيءٍ قَدِيرٌ", transliteration: "La ilaaha illallah wahdahu la shareeka lah, lahul-mulk wa lahul-hamd, wa huwa ‘ala kulli shay’in qadeer", translation: "There is no deity worthy of worship except Allah, alone, without any partner. His is the sovereignty and His is the praise, and He is capable of all things",
+                source: "Bukhaari 6403; Muslim 2691"),
     // 2026-11-24: appended (the order above is the Tasbih Counter's key).
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ", transliteration: "SubhanAllahi wa bihamdihi", translation: "Glory be to Allah and praise be to Him",
-                source: "Bukhari 6405; Muslim 2691"),
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ، وَالحَمدُ لِلَّهِ، وَلَا إِلَٰهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ", transliteration: "SubhanAllah, walhamdulillah, wa la ilaha illallah, wallahu akbar", translation: "Glory be to Allah, praise be to Allah, there is no deity worthy of worship except Allah, and Allah is the Greatest",
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ", transliteration: "SubhaanAllahi wa bihamdihi", translation: "Glory be to Allah and praise be to Him",
+                source: "Bukhaari 6405; Muslim 2691"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ، وَالحَمدُ لِلَّهِ، وَلَا إِلَٰهَ إِلَّا اللَّهُ، وَاللَّهُ أَكبَرُ", transliteration: "SubhaanAllah, walhamdulillah, wa la ilaaha illallah, wallahu akbar", translation: "Glory be to Allah, praise be to Allah, there is no deity worthy of worship except Allah, and Allah is the Greatest",
                 source: "Muslim 2137"),
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ، عَدَدَ خَلقِهِ، وَرِضَا نَفسِهِ، وَزِنَةَ عَرشِهِ، وَمِدَادَ كَلِمَاتِهِ", transliteration: "SubhanAllahi wa bihamdihi, 'adada khalqihi, wa rida nafsihi, wa zinata 'arshihi, wa midada kalimatihi", translation: "Glory be to Allah and praise be to Him, as many times as the number of His creation, as much as pleases Him, as much as the weight of His Throne, and as much as the ink of His words",
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ، عَدَدَ خَلقِهِ، وَرِضَا نَفسِهِ، وَزِنَةَ عَرشِهِ، وَمِدَادَ كَلِمَاتِهِ", transliteration: "SubhaanAllahi wa bihamdihi, ‘adada khalqihi, wa rida nafsihi, wa zinata ‘arshihi, wa midaada kalimaatihi", translation: "Glory be to Allah and praise be to Him, as many times as the number of His creation, as much as pleases Him, as much as the weight of His Throne, and as much as the ink of His words",
                 source: "Muslim 2726"),
-    CommonDhikr(arabicText: "أَستَغفِرُ اللَّهَ وَأَتُوبُ إِلَيهِ", transliteration: "Astaghfirullaha wa atubu ilayh", translation: "I seek the forgiveness of Allah and turn to Him in repentance",
-                source: "Bukhari 6307"),
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ، أَستَغفِرُ اللَّهَ وَأَتُوبُ إِلَيهِ", transliteration: "SubhanAllahi wa bihamdihi, astaghfirullaha wa atubu ilayh", translation: "Glory be to Allah and praise be to Him; I seek the forgiveness of Allah and turn to Him in repentance",
+    CommonDhikr(arabicText: "أَستَغفِرُ اللَّهَ وَأَتُوبُ إِلَيهِ", transliteration: "Astaghfirullaha wa atoobu ilayh", translation: "I seek the forgiveness of Allah and turn to Him in repentance",
+                source: "Bukhaari 6307"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ، أَستَغفِرُ اللَّهَ وَأَتُوبُ إِلَيهِ", transliteration: "SubhaanAllahi wa bihamdihi, astaghfirullaha wa atoobu ilayh", translation: "Glory be to Allah and praise be to Him; I seek the forgiveness of Allah and turn to Him in repentance",
                 source: "Muslim 484"),
-    CommonDhikr(arabicText: "رَبِّ اغفِر لِي وَتُب عَلَيَّ، إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ", transliteration: "Rabbighfir li wa tub 'alayya, innaka antat-Tawwabur-Rahim", translation: "My Lord, forgive me and accept my repentance; indeed, You are the Accepter of repentance, the Most Merciful",
-                source: "Abu Dawud 1516, sahih"),
-    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا أَنتَ سُبحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ", transliteration: "La ilaha illa anta subhanaka inni kuntu minaz-zalimin", translation: "There is no deity except You; glory be to You. Indeed, I have been of the wrongdoers",
-                source: "Quran 21:87; Tirmidhi 3505, sahih"),
-    CommonDhikr(arabicText: "حَسبُنَا اللَّهُ وَنِعمَ الوَكِيلُ", transliteration: "Hasbunallahu wa ni'mal-wakil", translation: "Allah is sufficient for us, and He is the best Disposer of affairs",
-                source: "Quran 3:173; Bukhari 4563"),
-    CommonDhikr(arabicText: "رَضِيتُ بِاللَّهِ رَبًّا، وَبِالإِسلَامِ دِينًا، وَبِمُحَمَّدٍ رَسُولًا", transliteration: "Raditu billahi rabban, wa bil-Islami dinan, wa bi-Muhammadin rasula", translation: "I am pleased with Allah as my Lord, with Islam as my religion, and with Muhammad as Messenger",
-                source: "Abu Dawud 1529, sahih; Muslim 1884"),
-    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ العَظِيمِ وَبِحَمدِهِ", transliteration: "SubhanAllahil-'Adheemi wa bihamdihi", translation: "Glory be to Allah, the Most Great, and praise be to Him",
-                source: "Tirmidhi 3464, sahih"),
-    CommonDhikr(arabicText: "الحَمدُ لِلَّهِ حَمدًا كَثِيرًا طَيِّبًا مُبَارَكًا فِيهِ", transliteration: "Alhamdulillahi hamdan kathiran tayyiban mubarakan fih", translation: "Praise be to Allah, abundant, good and blessed praise",
-                source: "Bukhari 799"),
-    CommonDhikr(arabicText: "اللَّهُ أَكبَرُ كَبِيرًا، وَالحَمدُ لِلَّهِ كَثِيرًا، وَسُبحَانَ اللَّهِ بُكرَةً وَأَصِيلًا", transliteration: "Allahu akbaru kabira, walhamdulillahi kathira, wa subhanallahi bukratan wa asila", translation: "Allah is the Greatest, truly great; abundant praise be to Allah; and glory be to Allah, morning and evening",
+    CommonDhikr(arabicText: "رَبِّ اغفِر لِي وَتُب عَلَيَّ، إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ", transliteration: "Rabbighfir li wa tub ‘alayya, innaka antat-Tawwaabur-Raheem", translation: "My Lord, forgive me and accept my repentance; indeed, You are the Accepter of repentance, the Most Merciful",
+                source: "Abu Daawood 1516, saheeh"),
+    CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا أَنتَ سُبحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ", transliteration: "La ilaaha illa anta subhaanaka inni kuntu minaz-zaalimeen", translation: "There is no deity except You; glory be to You. Indeed, I have been of the wrongdoers",
+                source: "Quran 21:87; Tirmidhi 3505, saheeh"),
+    CommonDhikr(arabicText: "حَسبُنَا اللَّهُ وَنِعمَ الوَكِيلُ", transliteration: "Hasbunallahu wa ni‘mal-wakeel", translation: "Allah is sufficient for us, and He is the best Disposer of affairs",
+                source: "Quran 3:173; Bukhaari 4563"),
+    CommonDhikr(arabicText: "رَضِيتُ بِاللَّهِ رَبًّا، وَبِالإِسلَامِ دِينًا، وَبِمُحَمَّدٍ رَسُولًا", transliteration: "Radeetu billahi rabban, wa bil-Islaami deenan, wa bi-Muhammadin rasoola", translation: "I am pleased with Allah as my Lord, with Islam as my religion, and with Muhammad as Messenger",
+                source: "Abu Daawood 1529, saheeh; Muslim 1884"),
+    CommonDhikr(arabicText: "سُبحَانَ اللَّهِ العَظِيمِ وَبِحَمدِهِ", transliteration: "SubhaanAllahil-‘Azeemi wa bihamdihi", translation: "Glory be to Allah, the Most Great, and praise be to Him",
+                source: "Tirmidhi 3464, saheeh"),
+    CommonDhikr(arabicText: "الحَمدُ لِلَّهِ حَمدًا كَثِيرًا طَيِّبًا مُبَارَكًا فِيهِ", transliteration: "Alhamdulillahi hamdan katheeran tayyiban mubaarakan feeh", translation: "Praise be to Allah, abundant, good and blessed praise",
+                source: "Bukhaari 799"),
+    CommonDhikr(arabicText: "اللَّهُ أَكبَرُ كَبِيرًا، وَالحَمدُ لِلَّهِ كَثِيرًا، وَسُبحَانَ اللَّهِ بُكرَةً وَأَصِيلًا", transliteration: "Allahu akbaru kabeera, walhamdulillahi katheera, wa subhaanallahi bukratan wa aseela", translation: "Allah is the Greatest, truly great; abundant praise be to Allah; and glory be to Allah, morning and evening",
                 source: "Muslim 601"),
-    CommonDhikr(arabicText: "سُبحَانَ المَلِكِ القُدُّوسِ", transliteration: "Subhanal-Malikil-Quddus", translation: "Glory be to the King, the Most Holy",
-                source: "Abu Dawud 1430, sahih"),
-    CommonDhikr(arabicText: "سُبحَانَكَ اللَّهُمَّ وَبِحَمدِكَ، أَشهَدُ أَن لَا إِلَٰهَ إِلَّا أَنتَ، أَستَغفِرُكَ وَأَتُوبُ إِلَيكَ", transliteration: "Subhanakallahumma wa bihamdika, ashhadu an la ilaha illa anta, astaghfiruka wa atubu ilayk", translation: "Glory be to You, O Allah, and praise be to You. I bear witness that there is no deity worthy of worship except You. I seek Your forgiveness and turn to You in repentance",
-                source: "Tirmidhi 3433, sahih"),
-    CommonDhikr(arabicText: "اللَّهُمَّ أَعِنِّي عَلَىٰ ذِكرِكَ وَشُكرِكَ وَحُسنِ عِبَادَتِكَ", transliteration: "Allahumma a'inni 'ala dhikrika wa shukrika wa husni 'ibadatik", translation: "O Allah, help me to remember You, to thank You, and to worship You well",
-                source: "Abu Dawud 1522, sahih"),
-    CommonDhikr(arabicText: "بِسمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسمِهِ شَيءٌ فِي الأَرضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ العَلِيمُ", transliteration: "Bismillahil-ladhi la yadurru ma'asmihi shay'un fil-ardi wa la fis-sama'i, wa huwas-Sami'ul-'Alim", translation: "In the name of Allah, with whose name nothing on earth or in the heavens can cause harm, and He is the All-Hearing, the All-Knowing",
-                source: "Abu Dawud 5088; Tirmidhi 3388, hasan sahih"),
-    CommonDhikr(arabicText: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِن شَرِّ مَا خَلَقَ", transliteration: "A'udhu bikalimatillahit-tammati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created",
+    CommonDhikr(arabicText: "سُبحَانَ المَلِكِ القُدُّوسِ", transliteration: "Subhaanal-Malikil-Quddoos", translation: "Glory be to the King, the Most Holy",
+                source: "Abu Daawood 1430, saheeh"),
+    CommonDhikr(arabicText: "سُبحَانَكَ اللَّهُمَّ وَبِحَمدِكَ، أَشهَدُ أَن لَا إِلَٰهَ إِلَّا أَنتَ، أَستَغفِرُكَ وَأَتُوبُ إِلَيكَ", transliteration: "Subhaanakallahumma wa bihamdika, ashhadu an la ilaaha illa anta, astaghfiruka wa atoobu ilayk", translation: "Glory be to You, O Allah, and praise be to You. I bear witness that there is no deity worthy of worship except You. I seek Your forgiveness and turn to You in repentance",
+                source: "Tirmidhi 3433, saheeh"),
+    CommonDhikr(arabicText: "اللَّهُمَّ أَعِنِّي عَلَىٰ ذِكرِكَ وَشُكرِكَ وَحُسنِ عِبَادَتِكَ", transliteration: "Allahumma a‘inni ‘ala dhikrika wa shukrika wa husni ‘ibaadatik", translation: "O Allah, help me to remember You, to thank You, and to worship You well",
+                source: "Abu Daawood 1522, saheeh"),
+    CommonDhikr(arabicText: "بِسمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسمِهِ شَيءٌ فِي الأَرضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ العَلِيمُ", transliteration: "Bismillahil-ladhi la yadurru ma‘asmihi shay’un fil-ardi wa la fis-samaa’i, wa huwas-Samee‘ul-‘Aleem", translation: "In the name of Allah, with whose name nothing on earth or in the heavens can cause harm, and He is the All-Hearing, the All-Knowing",
+                source: "Abu Daawood 5088; Tirmidhi 3388, hasan saheeh"),
+    CommonDhikr(arabicText: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِن شَرِّ مَا خَلَقَ", transliteration: "A‘oodhu bikalimaatillahit-taammaati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created",
                 source: "Muslim 2708"),
 ]
 
@@ -522,7 +522,9 @@ struct AdhkarView: View {
         let texts = commonDhikrItems.map { "\($0.transliteration) \($0.translation)" }
         // Keyed by the dhikr's own id, so index -> dhikr resolution survives any reorder of the source.
         let keys = commonDhikrItems.map(\.id)
-        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+        // v3 (2026-11-26): the transliterations were respelled to the house style, long vowels doubled
+        // (Scripts/transliteration.py), so an earlier build in Caches holds stale texts and keys.
+        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v3-\(texts.count)", texts: texts, keys: keys)
     }
 
     private func runAISearch(query: String) {
@@ -829,7 +831,7 @@ struct AdhkarView: View {
         Section(header: Text("ETYMOLOGY")) {
             ArticleEtymologyCard("Dhikr", arabic: "ذِكْر", root: "ذ ك ر", rootLatin: "dh-k-r",
                                  coreMeaning: String(localized: "to remember, to mention, to be mindful"),
-                                 text: String(localized: "Dhikr literally means remembrance or mentioning. It includes saying SubhanAllah, Alhamdulillah, Allahu Akbar, reciting the Quran, and keeping Allah always present in the heart and tongue."))
+                                 text: String(localized: "Dhikr literally means remembrance or mentioning. It includes saying SubhaanAllah, Alhamdulillah, Allahu Akbar, reciting the Quran, and keeping Allah always present in the heart and tongue."))
         }
     }
 
@@ -877,8 +879,8 @@ struct AdhkarView: View {
 
             ArticleCallout(
                 bullets: [
-                    String(localized: "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377, sahih)"),
-                    String(localized: "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)"),
+                    String(localized: "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377, saheeh)"),
+                    String(localized: "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhaanAllahi wa bihamdihi, SubhaanAllahil Azeem. (Bukhaari 6682; Muslim 2694)"),
                     String(localized: "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375, hasan)")
                 ],
                 title: String(localized: "Prophetic Encouragement"),
@@ -886,7 +888,7 @@ struct AdhkarView: View {
             )
             .articleCardRow()
 
-            ArticleClosing(String(localized: "Make dhikr a daily rhythm: morning, evening, after salah, before sleep, and during ordinary moments. A heart that remembers Allah does not stay empty."))
+            ArticleClosing(String(localized: "Make dhikr a daily rhythm: morning, evening, after salaah, before sleep, and during ordinary moments. A heart that remembers Allah does not stay empty."))
                 .articleCardRow()
         }
     }

@@ -862,7 +862,7 @@ enum MakhrajChart: CaseIterable {
     /// `Makharij2`, the grey head with every letter written at its place.
     case places
 
-    var assetName: String { self == .areas ? "Makharij1" : "Makharij2" }
+    var assetName: String { self == .areas ? "Makhaarij1" : "Makhaarij2" }
     var label: String { self == .areas ? String(localized: "The five areas") : String(localized: "Every letter's place") }
     private var pixelSize: CGSize { self == .areas ? CGSize(width: 1024, height: 561) : CGSize(width: 1600, height: 1257) }
     var aspectRatio: CGFloat { pixelSize.width / pixelSize.height }
@@ -1040,7 +1040,7 @@ struct MakhrajChartsRow: View {
                                 .aspectRatio(entry.chart.aspectRatio, contentMode: .fit)
                                 .overlay(ImageMarksOverlay(marks: entry.marks))
                                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                .focusableImage(entry.chart.assetName, title: String(localized: "Makharij al-Huruf"), subtitle: subject, marks: entry.marks)
+                                .focusableImage(entry.chart.assetName, title: String(localized: "Makhaarij al-Huroof"), subtitle: subject, marks: entry.marks)
                         }
                     }
                 }
@@ -1054,7 +1054,7 @@ struct MakhrajChartsRow: View {
                 guard let index = arguments.firstIndex(of: "-openMakhrajChart"), arguments.indices.contains(index + 1),
                       let entry = charts.first(where: { ($0.chart == .areas ? "areas" : "places") == arguments[index + 1] }) else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    FocusOverlayPresenter.shared.present(.image(entry.chart.assetName, title: "Makharij al-Huruf", subtitle: subject, marks: entry.marks))
+                    FocusOverlayPresenter.shared.present(.image(entry.chart.assetName, title: "Makhaarij al-Huroof", subtitle: subject, marks: entry.marks))
                 }
             }
             #endif

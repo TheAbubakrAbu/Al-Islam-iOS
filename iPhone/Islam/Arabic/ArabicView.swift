@@ -1046,7 +1046,7 @@ struct ArabicView: View {
     /// test, then the script's own topics, and grammar last.
     private var exploreTiles: [ExploreTile] {
         var tiles: [ExploreTile] = [
-            ExploreTile(id: "families", title: String(localized: "Letter Families"), caption: String(localized: "Makharij, sifaat, rules"),
+            ExploreTile(id: "families", title: String(localized: "Letter Families"), caption: String(localized: "Makhaarij, sifaat, rules"),
                         specimen: "ص س ز", door: .families),
             ExploreTile(id: "soundAlikes", title: String(localized: "Sound-Alikes"), caption: String(localized: "Pairs people mix up"),
                         specimen: "س ص", door: .soundAlikes),

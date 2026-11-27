@@ -35,36 +35,36 @@ enum LibraryTags {
     /// Every other chapter's tags: what a reader scanning the list wants to know before opening it.
     static let written: [String: [ProphetFacts.Tag]] = [
         // Stories of the Prophets: the chapters that are not one prophet's first.
-        "StoryProphetsView": [tag(.count, "25 named in the Quran"), tag(.rank, "Five of firm resolve"), tag(.known, "Nabi and rasul")],
+        "StoryProphetsView": [tag(.count, "25 named in the Quran"), tag(.rank, "Five of firm resolve"), tag(.known, "Nabi and rasool")],
         "StoryIntroView": [tag(.surah, "12:111"), tag(.known, "Lessons, not legends")],
-        "StoryFamilyView": [tag(.count, "Twelve tribes"), tag(.people, "Prophets who were kin"), tag(.known, "Adam to Muhammad")],
-        "StoryNationsView": [tag(.place, "‘Ad, Thamud, Madyan, Egypt"), tag(.known, "Their sin and their end")],
-        "StoryIsraeliyyatView": [tag(.people, "Yusha’, Danyal, ‘Uzayr"), tag(.known, "Named only outside the Quran")],
+        "StoryFamilyView": [tag(.count, "Twelve tribes"), tag(.people, "Prophets who were kin"), tag(.known, "Aadam to Muhammad")],
+        "StoryNationsView": [tag(.place, "‘Ad, Thamood, Madyan, Egypt"), tag(.known, "Their sin and their end")],
+        "StoryIsraeliyyatView": [tag(.people, "Yoosha’, Daanyaal, Uzayr"), tag(.known, "Named only outside the Quran")],
         "StoryMusaPharaohView": [tag(.place, "Egypt"), tag(.known, "Nine signs; the sea parted")],
         "StoryWildernessView": [tag(.place, "Sinai"), tag(.known, "The calf, the cow, forty years")],
         "StoryKhidrView": [tag(.surah, "Al-Kahf 18:60-82"), tag(.known, "The boat, the boy, the wall")],
 
         // Sahabah, Ahlul Bayt & Salaf.
         "CompanionsIntroView": [tag(.people, "The best generation"), tag(.known, "All of them upright")],
-        "CompanionAbuBakrView": [tag(.rank, "First caliph"), tag(.people, "Quraysh, Banu Taym"), tag(.date, "Caliph 11–13 AH"), tag(.known, "As-Siddiq")],
-        "CompanionUmarView": [tag(.rank, "Second caliph"), tag(.people, "Quraysh, Banu ‘Adi"), tag(.date, "Caliph 13–23 AH"), tag(.known, "Al-Faruq")],
-        "CompanionUthmanView": [tag(.rank, "Third caliph"), tag(.people, "Quraysh, Banu Umayyah"), tag(.date, "Caliph 23–35 AH"), tag(.known, "Dhun-Nurayn; the mushaf")],
-        "CompanionAliView": [tag(.rank, "Fourth caliph"), tag(.people, "Quraysh, Banu Hashim"), tag(.date, "Caliph 35–40 AH"), tag(.known, "Husband of Fatimah")],
+        "CompanionAbuBakrView": [tag(.rank, "First caliph"), tag(.people, "Quraysh, Banu Taym"), tag(.date, "Caliph 11–13 AH"), tag(.known, "As-Siddeeq")],
+        "CompanionUmarView": [tag(.rank, "Second caliph"), tag(.people, "Quraysh, Banu Adi"), tag(.date, "Caliph 13–23 AH"), tag(.known, "Al-Faarooq")],
+        "CompanionUthmanView": [tag(.rank, "Third caliph"), tag(.people, "Quraysh, Banu Umayyah"), tag(.date, "Caliph 23–35 AH"), tag(.known, "Dhun-Noorayn; the mushaf")],
+        "CompanionAliView": [tag(.rank, "Fourth caliph"), tag(.people, "Quraysh, Banu Haashim"), tag(.date, "Caliph 35–40 AH"), tag(.known, "Husband of Faatimah")],
         "CompanionTenView": [tag(.count, "Ten named together"), tag(.known, "Promised Paradise")],
         "CompanionKhadijahAishahView": [tag(.people, "Mothers of the Believers"), tag(.known, "The first believer; the most learned")],
         "CompanionFatimahView": [tag(.people, "Ahlul Bayt"), tag(.known, "Leader of the women of Paradise")],
-        "CompanionUnclesView": [tag(.people, "Banu Hashim"), tag(.known, "The lion of Allah; the two wings")],
+        "CompanionUnclesView": [tag(.people, "Banu Haashim"), tag(.known, "The lion of Allah; the two wings")],
         "CompanionFirstBelieversView": [tag(.place, "Makkah"), tag(.known, "The first believers and martyrs")],
-        "CompanionAbuHurayrahView": [tag(.rank, "Most prolific narrator"), tag(.known, "Ibn Umar, Anas, A’ishah")],
+        "CompanionAbuHurayrahView": [tag(.rank, "Most prolific narrator"), tag(.known, "Ibn Umar, Anas, Aa’ishah")],
         "CompanionWomenView": [tag(.people, "Women Companions"), tag(.known, "Narrators, scholars, fighters")],
         "CompanionTabiunView": [tag(.people, "The second generation"), tag(.known, "Students of the Companions")],
         "CompanionFourImamsView": [tag(.count, "Four schools"), tag(.date, "80–241 AH"), tag(.known, "One creed")],
 
         // Refuting Religions, the chapters of its own and the answers it lists.
         "ReligionsMethodView": [tag(.surah, "16:125"), tag(.known, "Wisdom and the best argument")],
-        "ReligionsOneView": [tag(.known, "Islam from Adam to Muhammad")],
+        "ReligionsOneView": [tag(.known, "Islam from Aadam to Muhammad")],
         "ReligionsPluralismView": [tag(.known, "Are all paths true?")],
-        "ReligionsSikhismView": [tag(.date, "From c. 1500 CE"), tag(.place, "Punjab"), tag(.book, "Guru Granth Sahib")],
+        "ReligionsSikhismView": [tag(.date, "From c. 1500 CE"), tag(.place, "Punjab"), tag(.book, "Guru Granth Saahib")],
         "ReligionsZoroastrianismView": [tag(.place, "Ancient Persia"), tag(.book, "Avesta"), tag(.known, "Two powers")],
         "ReligionsEastAsiaView": [tag(.place, "China and Japan"), tag(.book, "Analects, Tao Te Ching"), tag(.known, "Ancestors and spirits")],
         "ReligionsSecularismView": [tag(.date, "From the 18th century"), tag(.known, "Man as the measure")],
@@ -80,16 +80,16 @@ enum LibraryTags {
         "PreservationWritingView": [tag(.date, "In his lifetime"), tag(.known, "The scribes of revelation")],
         "PreservationOrderView": [tag(.count, "114 surahs"), tag(.known, "Set by the Prophet")],
         "PreservationScriptView": [tag(.date, "First century AH"), tag(.known, "Dots and vowel marks")],
-        "PreservationManuscriptsView": [tag(.place, "Birmingham, Sana’a, Topkapi"), tag(.date, "First century AH")],
+        "PreservationManuscriptsView": [tag(.place, "Birmingham, San‘a, Topkapi"), tag(.date, "First century AH")],
         "PreservationNaskhView": [tag(.known, "Abrogation, and its limits")],
         "PreservationClaimsView": [tag(.surah, "15:9"), tag(.known, "Claims of corruption answered")],
 
         // Science of Hadith.
-        "HadithScienceTermsView": [tag(.known, "Sahih, hasan, da‘if")],
+        "HadithScienceTermsView": [tag(.known, "Saheeh, hasan, da‘eef")],
         "HadithScienceBreaksView": [tag(.known, "Mursal, munqati‘, mu‘dal")],
-        "HadithScienceRijalView": [tag(.known, "Jarh wa ta‘dil")],
-        "HadithScienceAhadView": [tag(.known, "Ahad is proof in creed")],
-        "HadithScienceFabricationView": [tag(.known, "Mawdu‘: how forgeries were caught")],
+        "HadithScienceRijalView": [tag(.known, "Jarh wa ta‘deel")],
+        "HadithScienceAhadView": [tag(.known, "Aahaad is proof in creed")],
+        "HadithScienceFabricationView": [tag(.known, "Mawdoo‘: how forgeries were caught")],
         "HadithScienceQudsiView": [tag(.known, "Allah’s words, the Prophet’s wording")],
         "HadithScienceGradesView": [tag(.known, "Reading a grade line")],
         "HadithScienceOrientalistsView": [tag(.people, "Goldziher, Schacht"), tag(.known, "The Western critics answered")],
@@ -118,7 +118,7 @@ extension ProphetFacts.Tag {
         switch kind {
         case .rank:
             switch text {
-            case "Ulul ‘Azm": return "crown.fill"
+            case "Ulul Azm": return "crown.fill"
             case "Messenger": return "envelope.fill"
             case "Prophet": return "sparkle"
             default: return "star.fill"

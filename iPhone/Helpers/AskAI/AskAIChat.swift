@@ -1537,8 +1537,9 @@ enum AskAISourceDestination {
             EmptyView()
             #endif
         case .article(let id, _):
-            if let destination = IslamArticles.destination(for: id) {
-                destination
+            // Through the catalog, so a cited article has its Previous | Next like every other.
+            if IslamArticles.has(id) {
+                IslamArticleCatalog.destination(id: id)
             }
         case .name(let number):
             NamesView()

@@ -141,7 +141,7 @@ enum TabSection: CaseIterable, Identifiable {
         case .adhanTracker:
             return String(localized: "Today's prayers to mark and your streak, under the prayer times. Turned off, a prayer can still be marked from its detail or its notification.")
         case .adhanGlance:
-            return String(localized: "Tiles at the foot of the tab: where you are, the Qibla, daylight, the fast, the moon and the next Islamic date.")
+            return String(localized: "Tiles at the foot of the tab: where you are, the Qiblah, daylight, the fast, the moon and the next Islamic date.")
         #endif
         #if HAS_HADITH
         case .hadithSummary:

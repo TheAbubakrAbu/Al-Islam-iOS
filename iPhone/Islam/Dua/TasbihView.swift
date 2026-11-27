@@ -443,7 +443,7 @@ struct TasbihView: View {
         .applyConditionalListStyle()
         #endif
         .compactListSectionSpacing()
-        .navigationTitle("Tasbih Counter")
+        .navigationTitle("Tasbeeh Counter")
         #if DEBUG
         // `-tasbihTaps N`: N counts on the free counter, one every 100 ms, so the publish counter
         // (`-renderCounter`) can show one TasbihCounters publish per tap and the debounced persist.

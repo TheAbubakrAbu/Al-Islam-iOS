@@ -28,6 +28,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from tilawa_ts import eval_consts, load_softener, xz_compress  # noqa: E402
+from transliteration import restyle_names_details  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
@@ -194,6 +195,8 @@ def main() -> None:
         "themes": [{"id": t, "label": THEME_LABELS[t]} for t in themes],
         "names": names,
     }
+    # the Islam tab's one transliteration style (Scripts/transliteration.py)
+    pack = restyle_names_details(pack)
     body = json.dumps(pack, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
     blob = xz_compress(body)
     OUT.write_bytes(blob)

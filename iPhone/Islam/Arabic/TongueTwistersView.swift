@@ -46,14 +46,14 @@ enum TongueTwisters {
             reading: "wa qabru Harbin bimakaanin qafrin, wa laysa qurba qabri Harbin qabru",
             meaning: String(localized: "Harb’s grave is in a barren place, and there is no grave near Harb’s grave."),
             letters: ["ق", "ب", "ر"],
-            note: String(localized: "Al-Jahiz quotes this line in al-Bayan wat-Tabyeen as words whose letters clash: hardly anyone can say it three times in a row without stumbling. The books of balagha still use it to teach tanaafur.")),
+            note: String(localized: "Al-Jaahiz quotes this line in al-Bayaan wat-Tabyeen as words whose letters clash: hardly anyone can say it three times in a row without stumbling. The books of balagha still use it to teach tanaafur.")),
         TongueTwister(
             id: "amdaHhu", group: .classical,
             lines: ["كَرِيمٌ مَتَىٰٓ أَمۡدَحۡهُ أَمۡدَحۡهُ وَٱلۡوَرَىٰ", "مَعِي، وَإِذَا مَا لُمۡتُهُ لُمۡتُهُ وَحۡدِي"],
             reading: "kareemun mataa amdaHhu amdaHhu wal-waraa ma'ee, wa idhaa maa lumtuhu lumtuhu waHdee",
             meaning: String(localized: "A generous man: whenever I praise him, all people praise him with me, and whenever I blame him, I blame him alone."),
             letters: ["ح", "ه"],
-            note: String(localized: "A line of Abu Tammam’s. The books of balagha cite it because amdaHhu amdaHhu puts Haa against haa twice, two throat letters back to back.")),
+            note: String(localized: "A line of Abu Tammaam’s. The books of balagha cite it because amdaHhu amdaHhu puts Haa against haa twice, two throat letters back to back.")),
 
         // Well known.
         TongueTwister(
@@ -72,7 +72,7 @@ enum TongueTwisters {
             id: "khayTHareer", group: .wellKnown,
             lines: ["خَيۡطُ حَرِيرٍ عَلَىٰ حَآئِطِ خَلِيلٍ"],
             reading: "khayTu Hareerin 'alaa Haa’iTi khaleelin",
-            meaning: String(localized: "A silk thread on Khalil’s wall."),
+            meaning: String(localized: "A silk thread on Khaleel’s wall."),
             letters: ["خ", "ح", "ط"],
             note: String(localized: "Usually said in its spoken form, with حيط for wall. Khaa and Haa take turns all the way through.")),
 
@@ -81,14 +81,14 @@ enum TongueTwisters {
             id: "seenSaad", group: .letterPairs,
             lines: ["سَامِرٌ صَادَ سَمَكَةً صَغِيرَةً، وَصَالِحٌ صَادَ سَمَكَتَيۡنِ سَمِينَتَيۡنِ"],
             reading: "saamirun Saada samakatan Sagheeratan, wa SaaliHun Saada samakatayni sameenatayni",
-            meaning: String(localized: "Samir caught a small fish, and Salih caught two fat fish."),
+            meaning: String(localized: "Saamir caught a small fish, and Saalih caught two fat fish."),
             letters: ["س", "ص"],
             note: String(localized: "Seen is light and Saad is heavy: for Saad, raise the back of the tongue toward the roof of the mouth so the sound fills it.")),
         TongueTwister(
             id: "taaTaa", group: .letterPairs,
             lines: ["تُوتُ طَارِقٍ طَرِيٌّ، وَتُوتُ تَامِرٍ طَيِّبٌ"],
             reading: "tootu Taariqin Tariyyun, wa tootu taamirin Tayyibun",
-            meaning: String(localized: "Tariq’s mulberries are fresh, and Tamir’s mulberries are good."),
+            meaning: String(localized: "Taariq’s mulberries are fresh, and Taamir’s mulberries are good."),
             letters: ["ت", "ط"],
             note: String(localized: "The same spot behind the teeth for both: ت is light, ط fills the mouth.")),
         TongueTwister(
@@ -109,42 +109,42 @@ enum TongueTwisters {
             id: "DaadDhaa", group: .letterPairs,
             lines: ["ظَلَّ ضَيۡفُ ظَافِرٍ ضَاحِكًا ظُهۡرًا، وَظَلَّ ظَافِرٌ ضَجِرًا"],
             reading: "Dhalla Dayfu Dhaafirin DaaHikan Dhuhran, wa Dhalla Dhaafirun Dajiran",
-            meaning: String(localized: "Dhafir’s guest kept laughing at noon, and Dhafir stayed annoyed."),
+            meaning: String(localized: "Dhaafir’s guest kept laughing at noon, and Dhaafir stayed annoyed."),
             letters: ["ض", "ظ"],
             note: String(localized: "Both are heavy, and many people say them as one sound. ض is the side of the tongue on the molars, ظ the tip of the tongue on the edge of the teeth.")),
         TongueTwister(
             id: "qaafKaaf", group: .letterPairs,
             lines: ["قَلۡبُ كَلۡبِ قَاسِمٍ كَقَلۡبِ كَلۡبِ كَامِلٍ"],
             reading: "qalbu kalbi qaasimin kaqalbi kalbi kaamilin",
-            meaning: String(localized: "The heart of Qasim’s dog is like the heart of Kamil’s dog."),
+            meaning: String(localized: "The heart of Qaasim’s dog is like the heart of Kaamil’s dog."),
             letters: ["ق", "ك"],
             note: String(localized: "قَلۡب and كَلۡب are the same letters with one swapped. ق is made at the very back of the tongue, ك a little further forward.")),
         TongueTwister(
             id: "thaaSeen", group: .letterPairs,
             lines: ["شَرِبَ ثَامِرٌ ثُلُثَ ٱلشَّايِ، وَشَرِبَ سَامِرٌ ثُلُثَيۡهِ"],
             reading: "shariba thaamirun thuluthash-shaayi, wa shariba saamirun thuluthayhi",
-            meaning: String(localized: "Thamir drank a third of the tea, and Samir drank two thirds of it."),
+            meaning: String(localized: "Thaamir drank a third of the tea, and Saamir drank two thirds of it."),
             letters: ["ث", "س", "ش"],
             note: String(localized: "ث puts the tongue between the teeth; س and ش hiss and hush behind them. A ث said as a س changes the word.")),
         TongueTwister(
             id: "throat", group: .letterPairs,
             lines: ["عَهِدَ أَحۡمَدُ إِلَىٰ حَامِدٍ عَهۡدًا، فَحَفِظَ حَامِدٌ عَهۡدَ أَحۡمَدَ"],
             reading: "'ahida aHmadu ilaa Haamidin 'ahdan, faHafiDha Haamidun 'ahda aHmada",
-            meaning: String(localized: "Ahmad entrusted Hamid with a pledge, and Hamid kept Ahmad’s pledge."),
+            meaning: String(localized: "Ahmad entrusted Haamid with a pledge, and Haamid kept Ahmad’s pledge."),
             letters: ["ع", "ح", "ه"],
             note: String(localized: "All three come from the throat: ه from its deepest part, ع and ح from the middle. Give each its own sound.")),
         TongueTwister(
             id: "khaaGhayn", group: .letterPairs,
             lines: ["غَرَسَ خَالِدٌ خَوۡخًا، وَغَرَسَ غَانِمٌ خَرُّوبًا"],
             reading: "gharasa khaalidun khawkhan, wa gharasa ghaanimun kharrooban",
-            meaning: String(localized: "Khalid planted peaches, and Ghanim planted carob."),
+            meaning: String(localized: "Khaalid planted peaches, and Ghaanim planted carob."),
             letters: ["خ", "غ"],
             note: String(localized: "Both come from the top of the throat: خ is the breathy scrape, غ the voiced gargle.")),
         TongueTwister(
             id: "hamzaAyn", group: .letterPairs,
             lines: ["أَعۡطَىٰ عَلِيٌّ أَمِينًا عَسَلًا، وَأَعۡطَىٰٓ أَمِينٌ عَلِيًّا أَرُزًّا"],
             reading: "a'Taa 'aliyyun ameenan 'asalan, wa a'Taa ameenun 'aliyyan aruzzan",
-            meaning: String(localized: "Ali gave Amin honey, and Amin gave Ali rice."),
+            meaning: String(localized: "Ali gave Ameen honey, and Ameen gave Ali rice."),
             letters: ["ء", "ع"],
             note: String(localized: "A hamza is a clean catch in the throat; an ’ayn is a squeeze. Do not let the ’ayn fade into a hamza.")),
     ]
@@ -223,8 +223,8 @@ struct TongueTwistersView: View {
                     Text("Tap Slow to hear it first, then Fast to hear the speed to aim for.")
                 }
 
-                twisterSection(.classical, header: String(localized: "FROM THE BOOKS OF BALAGHA"),
-                               footer: String(localized: "Balagha, the study of eloquence, names it tanaafur when letters clash. These are its two classic examples."))
+                twisterSection(.classical, header: String(localized: "FROM THE BOOKS OF BALAAGHA"),
+                               footer: String(localized: "Balaagha, the study of eloquence, names it tanaafur when letters clash. These are its two classic examples."))
                 twisterSection(.wellKnown, header: String(localized: "WELL KNOWN"), footer: nil)
                 twisterSection(.letterPairs, header: String(localized: "LETTER PAIRS"),
                                footer: String(localized: "Written for this page, one for each pair on Sound-Alikes."), linksSoundAlikes: true)

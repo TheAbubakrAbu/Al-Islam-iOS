@@ -154,7 +154,7 @@ struct HamzatulWaslView: View {
             Text("Outside the Quran it is generally written as a plain alif, ا, with no mark: the hadith in this app write امْرِئٍ (a man) and الْأَعْمَالُ (the deeds) this way. It is still easy to spot. An alif is a long vowel, and no word can begin on a vowel, so a plain alif can never really start a word: when one does, it is hamzatul waSl. A hamza that is always said is written أ or إ.")
                 .font(.body)
 
-            Text("Some mushafs, in the Maghribi tradition of Warsh and Qaloon, mark it with a dot instead of the saad. You can switch the app's Quran to either: Quran Settings → Arabic Text → Hamzat al-Wasl.")
+            Text("Some mushafs, in the Maghribi tradition of Warsh and Qaaloon, mark it with a dot instead of the saad. You can switch the app's Quran to either: Quran Settings → Arabic Text → Hamzat al-Wasl.")
                 .font(.body)
         }
     }
@@ -243,7 +243,7 @@ struct HamzatulWaslView: View {
         } header: {
             Text("STARTING ON IT: THE ARTICLE TAKES A FATHA")
         } footer: {
-            Text("Starting on ٱلۡ, say \u{201C}a\u{201D}. Before a sun letter the laam is not heard and the next letter doubles: ar-RaHmaan, an-naas.")
+            Text("Starting on ٱلۡ, say \u{201C}a\u{201D}. Before a sun letter the laam is not heard and the next letter doubles: ar-Rahman, an-naas.")
         }
     }
 
@@ -905,7 +905,7 @@ enum WaslData {
     static let tanween: [Phrase] = [
         Phrase(arabic: "نُوحٌ ٱبۡنَهُۥ", reading: "nooHunibnahu", wrong: ["nooHun ibnahu", "nooHubnahu"],
                wrongArabic: ["نُوحُنۡ إِبۡنَهُۥ", "نُوحُبۡنَهُۥ"],
-               gloss: String(localized: "Nuh (called) his son"), reference: "11:42", kind: .tanween,
+               gloss: String(localized: "Nooh (called) his son"), reference: "11:42", kind: .tanween,
                saidAs: "نُوحُنِ بۡنَهُۥ", spoken: "نُوحُنِبْنَهُ",
                why: String(localized: "The tanween\u{2019}s noon takes a kasra and joins on: \u{201C}nooHu-ni-bnahu\u{201D}. The hamza of ٱبۡنَهُۥ is not said.")),
         Phrase(arabic: "خَيۡرًا ٱلۡوَصِيَّةُ", reading: "khayranil-waSiyyatu", wrong: ["khayran al-waSiyyatu", "khayral-waSiyyatu"],
@@ -940,7 +940,7 @@ enum WaslData {
                why: String(localized: "-un becomes -uni and joins the faa: \u{201C}rajulu-nif-taraa\u{201D}.")),
         Phrase(arabic: "لُوطٍ ٱلۡمُرۡسَلِينَ", reading: "Lootinil-mursaleen", wrong: ["Lootin al-mursaleen", "Lootil-mursaleen"],
                wrongArabic: ["لُوطِنۡ أَلۡمُرۡسَلِينَ", "لُوطِلۡمُرۡسَلِينَ"],
-               gloss: String(localized: "(the people of) Lut, the messengers"), reference: "26:160", kind: .tanween,
+               gloss: String(localized: "(the people of) Loot, the messengers"), reference: "26:160", kind: .tanween,
                saidAs: "لُوطِنِ لۡمُرۡسَلِينَ", spoken: "لُوطِنِلْمُرْسَلِينَ",
                why: String(localized: "-in becomes -ini: \u{201C}Looti-nil-mursaleen\u{201D}.")),
         Phrase(arabic: "قَرۡيَةٍ ٱسۡتَطۡعَمَآ", reading: "qaryatinis-taT\u{2019}amaa", wrong: ["qaryatin istaT\u{2019}amaa", "qaryatis-taT\u{2019}amaa"],

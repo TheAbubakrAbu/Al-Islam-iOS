@@ -1099,6 +1099,11 @@ enum HadithReferenceParser {
         for apostrophe in ["'", "\u{2018}", "\u{2019}", "\u{02BC}", "`"] {
             text = text.replacingOccurrences(of: apostrophe, with: "")
         }
+        // A long vowel written doubled is the same vowel: the Islam tab's "Saheeh al-Bukhaari", "Sunan
+        // Abi Daawood" and "Ibn Maajah" are "sahih", "bukhari", "dawud" and "majah" to the alias tables.
+        for (long, short) in [("ee", "i"), ("oo", "u"), ("aa", "a")] {
+            text = text.replacingOccurrences(of: long, with: short)
+        }
         return text
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty && !dropped.contains($0) }

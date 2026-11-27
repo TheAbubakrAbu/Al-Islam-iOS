@@ -287,7 +287,6 @@ struct WidgetGalleryView: View {
                 Item("Hijri Date (Arabic), inline", .accessoryInline) { HijriDateLockView(entry: entry, language: .arabic) },
                 Item("Hijri & Gregorian, rectangular", .accessoryRectangular) { DualCalendarLockView(entry: entry) },
                 Item("Next Prayer & Date, rectangular", .accessoryRectangular) { NextPrayerDateLockView(entry: entry) },
-                Item("Hijri & Gregorian, inline", .accessoryInline) { DualCalendarLockView(entry: entry) },
                 Item("Next Prayer & Date, inline", .accessoryInline) { NextPrayerDateLockView(entry: entry) },
             ]
         default:
@@ -362,7 +361,6 @@ struct WidgetGalleryView: View {
 
             lockScreenLine("Hijri Date") { HijriDateLockView(entry: entry, language: .english) }
             lockScreenLine("Hijri Date (Arabic)") { HijriDateLockView(entry: entry, language: .arabic) }
-            lockScreenLine("Hijri & Gregorian") { DualCalendarLockView(entry: entry) }
         }
     }
 

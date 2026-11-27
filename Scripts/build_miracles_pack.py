@@ -13,6 +13,9 @@ slug, title, category, level and blocks.
 import json, lzma, re, sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from transliteration import restyle_miracles  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 TILAWA = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "Tilawa"
 SRC = TILAWA / "src/data/generated/miraclesEn.ts"
@@ -267,6 +270,8 @@ def main():
         "categories": [{"id": c, "level": l} for c, l in CATEGORIES],
         "articles": articles,
     }
+    # the Islam tab's one transliteration style (Scripts/transliteration.py)
+    pack = restyle_miracles(pack)
     raw = json.dumps(pack, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_bytes(lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME))

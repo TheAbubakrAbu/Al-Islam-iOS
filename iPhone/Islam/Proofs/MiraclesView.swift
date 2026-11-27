@@ -436,7 +436,7 @@ struct MiraclesView: View {
                         systemImage: "sparkle.magnifyingglass",
                         headline: "We will show them Our signs in the horizons and within themselves until it becomes clear to them that it is the truth.",
                         source: "Quran 41:53",
-                        message: "Short articles arguing that the Quran describes the world as science and history later found it: mountains with roots, the expanding universe, the stages of the embryo. Each argument is the site's own; the meaning of an ayah rests with the classical scholars of tafsir, and a scientific claim can move on. Articles that rest on counting letters or numbers, or that pull an ayah away from its context, are left out. Read the rest as invitations to reflect.",
+                        message: "Short articles arguing that the Quran describes the world as science and history later found it: mountains with roots, the expanding universe, the stages of the embryo. Each argument is the site's own; the meaning of an ayah rests with the classical scholars of tafseer, and a scientific claim can move on. Articles that rest on counting letters or numbers, or that pull an ayah away from its context, are left out. Read the rest as invitations to reflect.",
                         stats: [
                             ResourceHeroStat("\(library.articles.count)", "articles"),
                             ResourceHeroStat("\(MiracleCategory.allCases.filter { library.count(in: $0) > 0 }.count)", "fields"),
@@ -448,7 +448,7 @@ struct MiraclesView: View {
 
                     StrongestSection(
                         items: library.strongest,
-                        footer: "Where the Quran's wording is most specific and the fit with later findings closest: a ruler's title, the stages of the embryo, the darkness of the deep sea. The app's own pick, not the source's, and still a reading rather than tafsir."
+                        footer: "Where the Quran's wording is most specific and the fit with later findings closest: a ruler's title, the stages of the embryo, the darkness of the deep sea. The app's own pick, not the source's, and still a reading rather than tafseer."
                     ) { article in
                         NavigationLink(destination: LazyDestination {
                             MiracleArticleView(article: article)
@@ -732,7 +732,25 @@ private struct MiracleCreditFooter: View {
 
 // MARK: - One article
 
+/// One Miracles of the Quran article, turned in place by its Previous | Next pair: the pair swaps
+/// the page for its neighbour in the subject instead of pushing it (Abu, 2026-11-26: "don't make it
+/// open a new page make it like Quran where it just changes the page"). Back returns to the index.
 struct MiracleArticleView: View {
+    @State private var article: MiracleArticle
+
+    init(article: MiracleArticle) {
+        _article = State(initialValue: article)
+    }
+
+    var body: some View {
+        // Rebuilt whole on a turn, so the new page opens at its top with its own neighbours.
+        MiracleArticlePage(article: article, turn: { article = $0 })
+            .id(article.slug)
+    }
+}
+
+/// One page of `MiracleArticleView`.
+struct MiracleArticlePage: View {
     @Environment(\.appearance) private var appearance
     /// Which miracle categories are already on the stack, so an in-prose category link cannot
     /// push one the reader is standing in. See `OpenScreens.swift`.
@@ -740,6 +758,8 @@ struct MiracleArticleView: View {
     @ObservedObject private var quranData = QuranData.shared
 
     let article: MiracleArticle
+    /// Swaps the page for a neighbour (`MiracleArticleView`).
+    let turn: (MiracleArticle) -> Void
 
     /// Previous and next within the same subject, so an article is a place in a list rather than a
     /// cul-de-sac the reader has to back out of.
@@ -783,19 +803,14 @@ struct MiracleArticleView: View {
         .contentShape(Rectangle())
 
         if let target {
-            // A BUTTON that records which way was tapped, not a link. Two links in one List row
-            // activate TOGETHER on any tap, so the pair pushed the previous AND the next article at
-            // once (found 2026-09-19 in the app-wide audit; introduced with the pair itself).
-            //
-            // A plain `NavigationLink` wrapping the label is also wrong here: in a List row it draws
-            // its own grey disclosure chevron beside the accent disc, which is the double-arrow this
-            // pair was built to avoid. One `@State` + one destination on the List solves both.
+            // A BUTTON, not a link: two links in one List row activate TOGETHER on any tap, and a
+            // `NavigationLink` in a row draws its own grey chevron beside the accent disc. Since
+            // 2026-11-26 it swaps the page in place (`MiracleArticleView`) rather than pushing one.
             Button {
-                // One door at a time: a prose link's push in flight plus this one is two destinations
-                // on one stack in a frame (the Settings doors' blank screen, then crash).
+                // Not while a prose link's push is in flight: the page under it would change.
                 guard linkDoor == nil else { return }
                 Settings.shared.hapticFeedback()
-                openSibling = target
+                turn(target)
             } label: {
                 label
             }
@@ -816,10 +831,6 @@ struct MiracleArticleView: View {
                 Circle().fill((enabled ? appearance.accent : Color.secondary).opacity(0.16))
             )
     }
-
-    /// The sibling (Previous / Next) the reader tapped. One piece of state driving ONE destination:
-    /// two hidden links in the same List row both fired on any tap.
-    @State private var openSibling: MiracleArticle?
 
     /// An in-app link followed from the prose: another article, or a subject's index. One state for
     /// the target AND the push (`pushDestination(item:)`): a flag beside two targets built the page
@@ -973,8 +984,6 @@ struct MiracleArticleView: View {
         // app's own scheme, and the push happens on the List (a lazy row's destination never fires).
         .environment(\.openURL, OpenURLAction { url in
             guard url.scheme == MiracleProse.scheme else { return .systemAction }
-            // The Previous | Next push already in flight: see `siblingNavigationButton`.
-            guard openSibling == nil else { return .handled }
             if url.host == "article", let slug = url.pathComponents.dropFirst().first,
                let target = MiraclesStore.shared.article(slug: slug) {
                 Settings.shared.hapticFeedback()
@@ -994,13 +1003,6 @@ struct MiracleArticleView: View {
             }
             return .handled
         })
-        // The ONE destination the Previous | Next pair shares (see `siblingNavigationButton`).
-        .pushDestination(isPresented: Binding(
-            get: { openSibling != nil },
-            set: { if !$0 { openSibling = nil } }
-        )) {
-            if let openSibling { MiracleArticleView(article: openSibling) }
-        }
         .pushDestination(item: $linkDoor) { door in
             switch door {
             case .article(let article): MiracleArticleView(article: article)

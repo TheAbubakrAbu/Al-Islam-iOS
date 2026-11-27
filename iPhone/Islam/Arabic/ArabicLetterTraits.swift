@@ -122,7 +122,7 @@ enum LetterAxis: String, CaseIterable, Identifiable {
 
         var transliteration: String {
             switch self {
-            case .place: return "Makharij"
+            case .place: return "Makhaarij"
             case .qualities: return "Sifaat"
             // "Tajweed" is the word a learner looks for; "Ahkaam" alone named the shelf for nobody
             // (Abu, 2026-10-22: "have like a tajweed filter").
@@ -154,8 +154,8 @@ enum LetterAxis: String, CaseIterable, Identifiable {
         case .special: return String(localized: "Special Qualities")
         case .weight: return String(localized: "Heavy or Light")
         case .qalqalah: return String(localized: "Qalqalah Letters")
-        case .noonSakinah: return String(localized: "After Noon Sakinah")
-        case .meemSakinah: return String(localized: "After Meem Sakinah")
+        case .noonSakinah: return String(localized: "After Noon Saakinah")
+        case .meemSakinah: return String(localized: "After Meem Saakinah")
         case .lamOfAl: return String(localized: "Sun and Moon Letters")
         case .madd: return String(localized: "Madd Letters")
         case .openers: return String(localized: "Opening Letters")
@@ -195,8 +195,8 @@ enum LetterAxis: String, CaseIterable, Identifiable {
         case .special: return String(localized: "Special")
         case .weight: return String(localized: "Heavy or Light")
         case .qalqalah: return String(localized: "Qalqalah")
-        case .noonSakinah: return String(localized: "Noon Sakinah")
-        case .meemSakinah: return String(localized: "Meem Sakinah")
+        case .noonSakinah: return String(localized: "Noon Saakinah")
+        case .meemSakinah: return String(localized: "Meem Saakinah")
         case .lamOfAl: return String(localized: "Sun and Moon")
         case .madd: return String(localized: "Madd")
         case .openers: return String(localized: "Openers")
@@ -206,20 +206,20 @@ enum LetterAxis: String, CaseIterable, Identifiable {
     var transliteration: String {
         switch self {
         case .makhraj: return "Makhraj"
-        case .exit: return "Al-Makharij as-Sab'ata 'Ashar"
+        case .exit: return "Al-Makhaarij as-Sab'ata Ashar"
         case .breath: return "Hams and Jahr"
-        case .flow: return "Shiddah and Rakhawah"
-        case .elevation: return "Isti'la and Istifal"
-        case .closure: return "Itbaq and Infitah"
-        case .fluency: return "Idhlaq and Ismat"
+        case .flow: return "Shiddah and Rakhaawah"
+        case .elevation: return "Isti'la and Istifaal"
+        case .closure: return "Itbaaq and Infitaah"
+        case .fluency: return "Idhlaaq and Ismaat"
         case .special: return "Sifaat with no opposite"
         case .weight: return "Tafkheem and Tarqeeq"
         case .qalqalah: return "Al-Qalqalah"
-        case .noonSakinah: return "Noon Sakinah and Tanween"
-        case .meemSakinah: return "Meem Sakinah"
+        case .noonSakinah: return "Noon Saakinah and Tanween"
+        case .meemSakinah: return "Meem Saakinah"
         case .lamOfAl: return "Laam Shamsiyyah and Qamariyyah"
         case .madd: return "Huroof al-Madd"
-        case .openers: return "Al-Huroof al-Muqatta'ah"
+        case .openers: return "Al-Huroof al-Muqatta‘ah"
         }
     }
 
@@ -437,7 +437,7 @@ enum LetterTraits {
     )
 
     static let rakhawah = LetterFamily(
-        id: "rakhawah", name: "Rakhawah", arabic: "الرَّخَاوَة", meaning: "Softness",
+        id: "rakhawah", name: "Rakhaawah", arabic: "الرَّخَاوَة", meaning: "Softness",
         summary: String(localized: "The sound keeps running for as long as you have breath."),
         detail: [
             String(localized: "Say سۡ or شۡ and hold it as long as you like: the exit stays slightly open and the sound runs through the gap."),
@@ -462,7 +462,7 @@ enum LetterTraits {
     )
 
     static let istifal = LetterFamily(
-        id: "istifal", name: "Istifal", arabic: "الاِستِفَال", meaning: "Lowering",
+        id: "istifal", name: "Istifaal", arabic: "الاِستِفَال", meaning: "Lowering",
         summary: String(localized: "The tongue lies low, so the letter stays light."),
         detail: [
             String(localized: "Every letter outside the seven isti'la letters is read light (tarqeeq). Three of them can still turn heavy: raa, the laam of Allah's Name, and alif, which copies the letter before it."),
@@ -473,7 +473,7 @@ enum LetterTraits {
     )
 
     static let itbaq = LetterFamily(
-        id: "itbaq", name: "Itbaq", arabic: "الإِطبَاق", meaning: "Clamping",
+        id: "itbaq", name: "Itbaaq", arabic: "الإِطبَاق", meaning: "Clamping",
         summary: String(localized: "The tongue presses up against the roof of the mouth and traps the sound."),
         detail: [
             // The left-to-right marks keep each pair in its own run: without them the comma joins "س, ط"
@@ -486,7 +486,7 @@ enum LetterTraits {
     )
 
     static let infitah = LetterFamily(
-        id: "infitah", name: "Infitah", arabic: "الاِنفِتَاح", meaning: "Opening",
+        id: "infitah", name: "Infitaah", arabic: "الاِنفِتَاح", meaning: "Opening",
         summary: String(localized: "The tongue stays apart from the roof of the mouth, so the sound has an open path."),
         detail: [
             String(localized: "Every letter outside the four itbaq letters. Three of them are still heavy (خ غ ق): their tongue rises without clamping."),
@@ -497,7 +497,7 @@ enum LetterTraits {
     )
 
     static let idhlaq = LetterFamily(
-        id: "idhlaq", name: "Idhlaq", arabic: "الإِذلَاق", meaning: "Fluency",
+        id: "idhlaq", name: "Idhlaaq", arabic: "الإِذلَاق", meaning: "Fluency",
         summary: String(localized: "Made at the tip of the tongue or the lips, so the letter leaves the mouth quickly."),
         detail: [
             String(localized: "This pair describes the letters themselves, not something the reciter performs. Arabic grammarians noticed that a native root of four or five letters nearly always contains one of these six."),
@@ -510,7 +510,7 @@ enum LetterTraits {
     )
 
     static let ismat = LetterFamily(
-        id: "ismat", name: "Ismat", arabic: "الإِصمَات", meaning: "Restraint",
+        id: "ismat", name: "Ismaat", arabic: "الإِصمَات", meaning: "Restraint",
         summary: String(localized: "Every other letter: a little heavier on the tongue than the fluent six."),
         detail: [
             String(localized: "Every letter outside the six idhlaq letters."),
@@ -560,7 +560,7 @@ enum LetterTraits {
     )
 
     static let inhiraf = LetterFamily(
-        id: "inhiraf", name: "Inhiraf", arabic: "الاِنحِرَاف", meaning: "Deviation",
+        id: "inhiraf", name: "Inhiraaf", arabic: "الاِنحِرَاف", meaning: "Deviation",
         summary: String(localized: "The sound starts at the tongue tip and escapes another way."),
         detail: [
             String(localized: "In laam it slips off the sides of the tongue. In raa it bends back over the tip."),
@@ -593,7 +593,7 @@ enum LetterTraits {
     )
 
     static let istitalah = LetterFamily(
-        id: "istitalah", name: "Istitalah", arabic: "الاِستِطَالَة", meaning: "Extension",
+        id: "istitalah", name: "Istitaalah", arabic: "الاِستِطَالَة", meaning: "Extension",
         summary: String(localized: "The sound travels along the side of the tongue, from the back molars forward."),
         detail: [
             String(localized: "The extension is in distance, not in time: Daad is not held longer than any other letter. It is counted the hardest letter to pronounce, and Arabic is called the language of the Daad after it."),
@@ -643,7 +643,7 @@ enum LetterTraits {
     )
 
     static let aqsaLisan = LetterFamily(
-        id: "aqsaLisan", name: "Aqsa al-Lisan", arabic: "أَقصَى اللِّسَان", meaning: "Back of the Tongue",
+        id: "aqsaLisan", name: "Aqsa al-Lisaan", arabic: "أَقصَى اللِّسَان", meaning: "Back of the Tongue",
         summary: String(localized: "The very back of the tongue rises to meet the roof of the mouth."),
         detail: [
             String(localized: "Qaaf meets the soft palate, as far back as the tongue reaches. Kaaf is the same movement one small step forward, where the hard palate begins. The pair are called the lahawiyyah letters (اللَّهَوِيَّة), after the uvula beside them."),
@@ -654,7 +654,7 @@ enum LetterTraits {
     )
 
     static let wasatLisan = LetterFamily(
-        id: "wasatLisan", name: "Wasat al-Lisan", arabic: "وَسَط اللِّسَان", meaning: "Middle of the Tongue",
+        id: "wasatLisan", name: "Wasat al-Lisaan", arabic: "وَسَط اللِّسَان", meaning: "Middle of the Tongue",
         summary: String(localized: "The middle of the tongue against the hard palate above it."),
         detail: [
             String(localized: "Jeem closes completely, sheen lets the air spread, and yaa only approaches. The yaa meant here is the consonant yaa and the leen yaa: the madd yaa comes from the jawf. The three are called the shajriyyah letters (الشَّجرِيَّة)."),
@@ -665,7 +665,7 @@ enum LetterTraits {
     )
 
     static let haffatLisan = LetterFamily(
-        id: "haffatLisan", name: "Haffat al-Lisan", arabic: "حَافَّة اللِّسَان", meaning: "Side of the Tongue",
+        id: "haffatLisan", name: "Haaffat al-Lisaan", arabic: "حَافَّة اللِّسَان", meaning: "Side of the Tongue",
         summary: String(localized: "One side of the tongue, or both, pressed against the upper molars."),
         detail: [
             String(localized: "Only Daad is made here, and no other language has it. The left side is the easier and the more common. Laam uses the front of the same edge, further forward, and is counted with the tongue tip."),
@@ -676,7 +676,7 @@ enum LetterTraits {
     )
 
     static let tarafLisan = LetterFamily(
-        id: "tarafLisan", name: "Taraf al-Lisan", arabic: "طَرَف اللِّسَان", meaning: "Tip of the Tongue",
+        id: "tarafLisan", name: "Taraf al-Lisaan", arabic: "طَرَف اللِّسَان", meaning: "Tip of the Tongue",
         summary: String(localized: "Twelve letters, a few millimetres apart, at the tip of the tongue."),
         detail: [
             String(localized: "Against the gum of the upper front teeth: laam, then noon just below it, then raa slightly further in (the dhalqiyyah letters, الذَّلقِيَّة)."),
@@ -688,7 +688,7 @@ enum LetterTraits {
     )
 
     static let shafatan = LetterFamily(
-        id: "shafatan", name: "Ash-Shafatan", arabic: "الشَّفَتَان", meaning: "The Lips",
+        id: "shafatan", name: "Ash-Shafataan", arabic: "الشَّفَتَان", meaning: "The Lips",
         summary: String(localized: "The only articulation points you can watch in a mirror."),
         detail: [
             String(localized: "Faa: the inside of the lower lip against the edges of the upper front teeth. Baa and meem: both lips pressed together, baa firmly, meem lightly with the sound leaving through the nose. Waaw: both lips rounded and pushed forward, never closing."),
@@ -725,53 +725,53 @@ enum LetterTraits {
                       letters: ["غ", "خ"], groupName: "Halqiyyah", groupArabic: "الحَلقِيَّة",
                       meaning: "Upper Throat",
                       keywords: ["halqiyyah", "halqiyya", "halqi", "throat", "top of the throat"]),
-        LetterMakhraj(id: 5, zoneID: "aqsaLisan", arabic: "أَقصَى اللِّسَان", name: "Aqsa al-Lisan",
+        LetterMakhraj(id: 5, zoneID: "aqsaLisan", arabic: "أَقصَى اللِّسَان", name: "Aqsa al-Lisaan",
                       place: String(localized: "The very back of the tongue against the soft palate"),
                       letters: ["ق"], groupName: "Lahawiyyah", groupArabic: "اللَّهَوِيَّة",
                       meaning: "Back of the Tongue, Soft Palate",
                       keywords: ["lahawiyyah", "lahawiyya", "lahawi", "uvula", "uvular", "soft palate", "velar"]),
-        LetterMakhraj(id: 6, zoneID: "aqsaLisan", arabic: "أَقصَى اللِّسَان", name: "Aqsa al-Lisan",
+        LetterMakhraj(id: 6, zoneID: "aqsaLisan", arabic: "أَقصَى اللِّسَان", name: "Aqsa al-Lisaan",
                       place: String(localized: "The back of the tongue, one step forward, where the hard palate begins"),
                       letters: ["ك"], groupName: "Lahawiyyah", groupArabic: "اللَّهَوِيَّة",
                       meaning: "Back of the Tongue, Hard Palate",
                       keywords: ["lahawiyyah", "lahawiyya", "lahawi", "hard palate", "velar"]),
-        LetterMakhraj(id: 7, zoneID: "wasatLisan", arabic: "وَسَط اللِّسَان", name: "Wasat al-Lisan",
+        LetterMakhraj(id: 7, zoneID: "wasatLisan", arabic: "وَسَط اللِّسَان", name: "Wasat al-Lisaan",
                       place: String(localized: "The middle of the tongue against the hard palate"),
                       letters: ["ج", "ش", "ي"], groupName: "Shajriyyah", groupArabic: "الشَّجرِيَّة",
                       roleNote: String(localized: "as a consonant or a leen letter"),
                       meaning: "Middle of the Tongue",
                       keywords: ["shajriyyah", "shajriyya", "shajri", "palatal", "hard palate"]),
-        LetterMakhraj(id: 8, zoneID: "haffatLisan", arabic: "حَافَّة اللِّسَان", name: "Haffat al-Lisan",
+        LetterMakhraj(id: 8, zoneID: "haffatLisan", arabic: "حَافَّة اللِّسَان", name: "Haaffat al-Lisaan",
                       place: String(localized: "The side of the tongue, or both sides, against the upper molars"),
                       letters: ["ض"],
                       meaning: "Side of the Tongue",
                       keywords: ["side", "edge", "lateral", "molars", "daad"]),
-        LetterMakhraj(id: 9, zoneID: "tarafLisan", arabic: "أَدنَى حَافَّة اللِّسَان", name: "Adna Haffat al-Lisan",
+        LetterMakhraj(id: 9, zoneID: "tarafLisan", arabic: "أَدنَى حَافَّة اللِّسَان", name: "Adna Haaffat al-Lisaan",
                       place: String(localized: "The front edge of the tongue, up to the tip, against the gum of the upper front teeth"),
                       letters: ["ل"], groupName: "Dhalqiyyah", groupArabic: "الذَّلقِيَّة",
                       meaning: "Front Edge of the Tongue",
                       keywords: ["dhalqiyyah", "dhalqiyya", "dhalqi", "thalqiyyah", "gum", "front edge"]),
-        LetterMakhraj(id: 10, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisan",
+        LetterMakhraj(id: 10, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisaan",
                       place: String(localized: "The tip of the tongue against the gum of the upper front teeth, just below laam's place"),
                       letters: ["ن"], groupName: "Dhalqiyyah", groupArabic: "الذَّلقِيَّة",
                       meaning: "Tip at the Gum",
                       keywords: ["dhalqiyyah", "dhalqiyya", "dhalqi", "thalqiyyah", "gum", "tip"]),
-        LetterMakhraj(id: 11, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisan",
+        LetterMakhraj(id: 11, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisaan",
                       place: String(localized: "The tip of the tongue at the same gum, slightly further in than noon"),
                       letters: ["ر"], groupName: "Dhalqiyyah", groupArabic: "الذَّلقِيَّة",
                       meaning: "Tip, a Step In",
                       keywords: ["dhalqiyyah", "dhalqiyya", "dhalqi", "thalqiyyah", "gum", "tip", "trill"]),
-        LetterMakhraj(id: 12, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisan",
+        LetterMakhraj(id: 12, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisaan",
                       place: String(localized: "The tip of the tongue at the roots of the two upper front teeth"),
                       letters: ["ط", "د", "ت"], groupName: "Nit'iyyah", groupArabic: "النِّطعِيَّة",
                       meaning: "Tip at the Roots of the Teeth",
                       keywords: ["nit'iyyah", "nitiyyah", "nit'iyya", "nitiyya", "nit'i", "roots", "alveolar", "teeth"]),
-        LetterMakhraj(id: 13, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisan",
+        LetterMakhraj(id: 13, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisaan",
                       place: String(localized: "The tip of the tongue just above the lower front teeth, the air whistling past the upper ones"),
                       letters: ["ص", "س", "ز"], groupName: "Asaliyyah", groupArabic: "الأَسَلِيَّة",
                       meaning: "Tip at the Lower Teeth",
                       keywords: ["asaliyyah", "asaliyya", "asali", "whistling", "sibilant", "lower teeth"]),
-        LetterMakhraj(id: 14, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisan",
+        LetterMakhraj(id: 14, zoneID: "tarafLisan", arabic: "طَرَف اللِّسَان", name: "Taraf al-Lisaan",
                       place: String(localized: "The tip of the tongue touching the edges of the two upper front teeth"),
                       letters: ["ظ", "ذ", "ث"], groupName: "Lithawiyyah", groupArabic: "اللِّثَوِيَّة",
                       meaning: "Tip at the Edges of the Teeth",
@@ -781,13 +781,13 @@ enum LetterTraits {
                       letters: ["ف"], groupName: "Shafawiyyah", groupArabic: "الشَّفَوِيَّة",
                       meaning: "Lower Lip and Teeth",
                       keywords: ["shafawiyyah", "shafawiyya", "shafawi", "labial", "labiodental", "lip", "lower lip"]),
-        LetterMakhraj(id: 16, zoneID: "shafatan", arabic: "الشَّفَتَان", name: "Ash-Shafatan",
+        LetterMakhraj(id: 16, zoneID: "shafatan", arabic: "الشَّفَتَان", name: "Ash-Shafataan",
                       place: String(localized: "The two lips: pressed shut for baa and meem, rounded and open for waaw"),
                       letters: ["ب", "م", "و"], groupName: "Shafawiyyah", groupArabic: "الشَّفَوِيَّة",
                       roleNote: String(localized: "as a consonant or a leen letter"),
                       meaning: "The Two Lips",
                       keywords: ["shafawiyyah", "shafawiyya", "shafawi", "labial", "bilabial", "lips"]),
-        LetterMakhraj(id: 17, zoneID: "khayshum", arabic: "الخَيشُوم", name: "Al-Khayshum",
+        LetterMakhraj(id: 17, zoneID: "khayshum", arabic: "الخَيشُوم", name: "Al-Khayshoom",
                       place: String(localized: "The nasal passage. No letter is made here: it carries the ghunnah of noon and meem"),
                       letters: [],
                       meaning: "The Nasal Passage",
@@ -894,7 +894,7 @@ enum LetterTraits {
     )
 
     static let idghamGhunnah = LetterFamily(
-        id: "idghamGhunnah", name: "Idgham Bighunnah", arabic: "الإِدغَام بِغُنَّة", meaning: "Merge with Ghunnah",
+        id: "idghamGhunnah", name: "Idghaam Bighunnah", arabic: "الإِدغَام بِغُنَّة", meaning: "Merge with Ghunnah",
         summary: String(localized: "The noon merges into the next letter and the nasal hum is held two counts."),
         detail: [
             String(localized: "Only across two words. Inside one word the noon stays clear, which happens in four words of the Quran: ٱلدُّنۡيَا (dunyaa), بُنۡيَٰنٞ (bunyaan), قِنۡوَانٞ (qinwaan) and صِنۡوَانٞ (sinwaan)."),
@@ -908,7 +908,7 @@ enum LetterTraits {
     )
 
     static let idghamBilaGhunnah = LetterFamily(
-        id: "idghamBilaGhunnah", name: "Idgham Bilaa Ghunnah", arabic: "الإِدغَام بِغَيرِ غُنَّة", meaning: "Merge Without Ghunnah",
+        id: "idghamBilaGhunnah", name: "Idghaam Bilaa Ghunnah", arabic: "الإِدغَام بِغَيرِ غُنَّة", meaning: "Merge Without Ghunnah",
         summary: String(localized: "The noon merges completely into the next letter, with no nasal sound at all."),
         detail: [
             String(localized: "The noon vanishes and the laam or raa is doubled: مِن رَّبِّهِمۡ is read \u{201C}mir-rabbihim\u{201D}. The mushaf shows it with a shaddah on the next letter."),
@@ -930,14 +930,14 @@ enum LetterTraits {
     )
 
     static let ikhfaa = LetterFamily(
-        id: "ikhfaa", name: "Ikhfaa Haqiqi", arabic: "الإِخفَاء الحَقِيقِيّ", meaning: "Hidden",
+        id: "ikhfaa", name: "Ikhfaa Haqeeqi", arabic: "الإِخفَاء الحَقِيقِيّ", meaning: "Hidden",
         summary: String(localized: "The noon is hidden: between clear and merged, with a two-count hum."),
         detail: [
             String(localized: "The tongue does not touch the noon's place. It gets ready for the next letter instead, while the nose carries the hum, so the hum is heavy before a heavy letter (ص ض ط ظ ق) and light before the rest."),
         ],
         letters: ["ص", "ذ", "ث", "ك", "ج", "ش", "ق", "س", "د", "ط", "ز", "ف", "ت", "ض", "ظ"],
         mnemonic: "صِفۡ ذَا ثَنَا كَمۡ جَادَ شَخۡصٌ قَدۡ سَمَا\nدُمۡ طَيِّبًا زِدۡ فِي تُقًى ضَعۡ ظَالِمًا",
-        mnemonicNote: String(localized: "A line of Tuhfat al-Atfal: the first letter of each word is an ikhfaa letter."),
+        mnemonicNote: String(localized: "A line of Tuhfat al-Atfaal: the first letter of each word is an ikhfaa letter."),
         systemImage: "eye.slash", lessonID: "ikhfa", legend: .ikhfaaLight,
         keywords: ["ikhfa", "ikhfaa", "hidden", "hiding", "conceal"]
     )
@@ -956,7 +956,7 @@ enum LetterTraits {
     )
 
     static let idghamShafawi = LetterFamily(
-        id: "idghamShafawi", name: "Idgham Shafawi", arabic: "الإِدغَام الشَّفَوِيّ", meaning: "Merged at the Lips",
+        id: "idghamShafawi", name: "Idghaam Shafawi", arabic: "الإِدغَام الشَّفَوِيّ", meaning: "Merged at the Lips",
         summary: String(localized: "Before another meem, the two merge into one doubled meem with a two-count hum."),
         detail: [
             String(localized: "Also called idgham mithlayn sagheer (إِدغَام المِثلَين الصَّغِير): two identical letters, the first with a sukoon. The mushaf shows it with a shaddah on the second meem."),
@@ -987,7 +987,7 @@ enum LetterTraits {
         ],
         letters: ["ط", "ث", "ص", "ر", "ت", "ض", "ذ", "ن", "د", "س", "ظ", "ز", "ش", "ل"],
         mnemonic: "طِبۡ ثُمَّ صِلۡ رَحِمًا تَفُزۡ ضِفۡ ذَا نِعَمۡ\nدَعۡ سُوءَ ظَنٍّ زُرۡ شَرِيفًا لِلۡكَرَمۡ",
-        mnemonicNote: String(localized: "A line of Tuhfat al-Atfal: the first letter of each word is a sun letter."),
+        mnemonicNote: String(localized: "A line of Tuhfat al-Atfaal: the first letter of each word is a sun letter."),
         systemImage: "sun.max", lessonID: "lam-shamsiyyah-qamariyyah", legend: .lamShamsiyah,
         keywords: ["sun", "solar", "shams", "shamsi", "shamsiyyah"]
     )
@@ -1024,7 +1024,7 @@ enum LetterTraits {
     // MARK: Opening letters
 
     static let openersSix = LetterFamily(
-        id: "openersSix", name: "Madd Lazim Harfi", arabic: "مَدّ لَازِم حَرفِيّ", meaning: "Held Six Counts",
+        id: "openersSix", name: "Madd Laazim Harfi", arabic: "مَدّ لَازِم حَرفِيّ", meaning: "Held Six Counts",
         summary: String(localized: "Opening letters whose names are three letters with a madd in the middle."),
         detail: [
             String(localized: "An opening letter is read by its NAME: نٓ is read \u{201C}noon\u{201D}, and its long vowel is followed by a sukoon, so it is held six counts. The mushaf writes the madd sign over each of them."),

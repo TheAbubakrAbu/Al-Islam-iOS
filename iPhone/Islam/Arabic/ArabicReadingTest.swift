@@ -620,7 +620,7 @@ struct ReadingTier: Identifiable, Hashable {
             ],
             specimen: "ة", display: .joined, skills: [.stop], hint: .letterByLetter),
         ReadingTier(
-            id: "ayat", stage: .mushaf, title: String(localized: "Short Ayat"), arabic: "آيَات قَصِيرَة",
+            id: "ayat", stage: .mushaf, title: String(localized: "Short Aayaat"), arabic: "آيَات قَصِيرَة",
             summary: String(localized: "Whole ayat read straight through, stopping at the end"),
             teaches: [
                 String(localized: "Short ayat, read straight through. Inside an ayah a joining hamza is dropped, so the word before runs into the laam or the letter after it."),

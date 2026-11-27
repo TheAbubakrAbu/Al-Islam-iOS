@@ -1083,7 +1083,7 @@ struct TajweedDoorRow: View {
                 NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) { label }
             case .makharijShelf:
                 GuardedScreenLink(screen: .letterFamilies, id: "makhraj") {
-                    LetterFamiliesView(title: String(localized: "Makharij"), axes: [.makhraj, .exit])
+                    LetterFamiliesView(title: String(localized: "Makhaarij"), axes: [.makhraj, .exit])
                         .openScreen(.letterFamilies, id: "makhraj")
                 } label: {
                     label

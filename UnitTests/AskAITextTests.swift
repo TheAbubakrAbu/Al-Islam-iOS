@@ -149,7 +149,7 @@ final class ArticleSummarySourceTests: XCTestCase {
     func testATajweedPageSummarizesInEnglish() throws {
         let page = try XCTUnwrap(IslamArticles.all.first { $0.id == "TajweedSukoonView" })
         let source = page.summarySource(limit: 6_000, keepArabic: false)
-        XCTAssertTrue(source.text.contains("Uthmani sukoon"))
+        XCTAssertTrue(source.text.contains("Uthmaani sukoon"))
         XCTAssertNil(source.text.range(of: "[\\u0600-\\u06FF]", options: .regularExpression))
     }
 }

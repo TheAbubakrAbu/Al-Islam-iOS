@@ -136,4 +136,52 @@ final class IslamLibraryCatalogTests: XCTestCase {
         let ids = hits.map(\.id)
         XCTAssertEqual(ids.count, Set(ids).count)
     }
+
+    // MARK: Previous and Next (2026-11-26)
+
+    /// The pair at an article's foot walks the index it was opened from, straight through its groups.
+    func testThePairWalksTheIndexInItsOrder() {
+        let pillars = ArticleReadingOrder(IslamArticleCatalog.pillarsGroups)
+        XCTAssertEqual(pillars.ids.first, "GodPillarView")
+        // Across a group's end: the last of the five pillars leads to the six's overview.
+        let hajj = pillars.neighbours(of: "HajjView")
+        XCTAssertEqual(hajj.previous?.id, "ZakahView")
+        XCTAssertEqual(hajj.next?.id, "SixPillarsOverviewView")
+        // The ends: nothing before the first page, nothing after the last, and both still walk.
+        XCTAssertNil(pillars.neighbours(of: "GodPillarView").previous)
+        XCTAssertNil(pillars.neighbours(of: pillars.ids.last ?? "").next)
+        XCTAssertTrue(pillars.walks("GodPillarView"))
+        // A page the order does not hold has no pair at all.
+        XCTAssertFalse(pillars.walks("WudhuView"))
+    }
+
+    /// A page opened from anywhere but an index walks its own home; a prophet's page walks the 25, and a
+    /// library lists a page twice at most once.
+    func testAPageOpenedElsewhereWalksItsHome() {
+        XCTAssertEqual(ArticleReadingOrder.home(of: "WudhuView"), ArticleReadingOrder(IslamArticleCatalog.guidesGroups))
+        XCTAssertEqual(ArticleReadingOrder.home(of: "ProphetNuhView").ids.count, 25)
+        XCTAssertEqual(ArticleReadingOrder.home(of: "StoryNuhView"), ArticleReadingOrder(IslamArticleCatalog.storiesGroups))
+        XCTAssertTrue(ArticleReadingOrder.home(of: "NoSuchView").ids.isEmpty)
+        for home in IslamArticleHome.allCases {
+            let ids = ArticleReadingOrder(IslamArticleCatalog.groups(for: home)).ids
+            XCTAssertEqual(ids.count, Set(ids).count, "\(home) walks a page twice")
+        }
+    }
+
+    /// Each counted set opens on its overview, and the mixed groups have none.
+    @MainActor
+    func testEachCountedSetOpensOnItsOverview() {
+        let heads = Dictionary(uniqueKeysWithValues: IslamArticleCatalog.pillarsGroups.map { ($0.title, $0.entries.first?.id) })
+        XCTAssertEqual(heads["THE 5 PILLARS OF ISLAM"], "FivePillarsOverviewView")
+        XCTAssertEqual(heads["THE 6 PILLARS OF EEMAAN (FAITH)"], "SixPillarsOverviewView")
+        XCTAssertEqual(heads["THE 3 PILLARS OF TAWHEED"], "ThreePillarsOverviewView")
+        XCTAssertEqual(heads["THE THREE HOLY MOSQUES"], "HolyMosquesOverviewView")
+        let overviews = IslamArticleCatalog.all.filter { $0.id.hasSuffix("OverviewView") }
+        XCTAssertEqual(overviews.count, 4)
+        for overview in overviews {
+            XCTAssertTrue(overview.emphasized, "\(overview.id) is not set apart in its group")
+            XCTAssertNotNil(IslamArticles.destination(for: overview.id), "\(overview.id) does not open")
+            XCTAssertFalse(ArticleSources.table[overview.id]?.isEmpty ?? true, "\(overview.id) has no sources")
+        }
+    }
 }

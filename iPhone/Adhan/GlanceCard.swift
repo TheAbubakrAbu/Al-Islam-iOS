@@ -129,7 +129,7 @@ struct GlanceCard: View {
                           value: live.currentLocation?.displayCity ?? String(localized: "Unavailable"), action: .cityPrayerTimes))
         here.append(.init(icon: "clock.fill", title: String(localized: "Time Zone"), value: timeZoneSummary, action: .cityPrayerTimes))
         if let qibla {
-            here.append(.init(icon: "location.north.line.fill", title: String(localized: "Qibla"), value: qibla,
+            here.append(.init(icon: "location.north.line.fill", title: String(localized: "Qiblah"), value: qibla,
                               iconRotation: qiblaBearing, action: .qibla(bearing: qibla, distance: makkah)))
         }
         if let makkah {

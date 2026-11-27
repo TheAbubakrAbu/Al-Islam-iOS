@@ -74,6 +74,11 @@ enum IslamArticles {
         case "ProphetPillarView": return AnyView(ProphetPillarView())
         case "SunnahPillarView": return AnyView(SunnahPillarView())
         case "HadithPillarView": return AnyView(HadithPillarView())
+        // The overviews that open the counted sets (2026-11-26).
+        case "FivePillarsOverviewView": return AnyView(FivePillarsOverviewView())
+        case "SixPillarsOverviewView": return AnyView(SixPillarsOverviewView())
+        case "ThreePillarsOverviewView": return AnyView(ThreePillarsOverviewView())
+        case "HolyMosquesOverviewView": return AnyView(HolyMosquesOverviewView())
         case "ShahadahView": return AnyView(ShahadahView())
         case "SalahView": return AnyView(SalahView())
         case "SawmView": return AnyView(SawmView())
@@ -319,6 +324,11 @@ enum IslamArticles {
         default: return nil
         }
     }
+
+    /// Whether `destination(for:)` has a page for this id. It makes the page's view value to find out,
+    /// which costs nothing worth counting: a page's work is in its body, and that never runs here.
+    @MainActor
+    static func has(_ id: String) -> Bool { destination(for: id) != nil }
 
     // MARK: Search
 

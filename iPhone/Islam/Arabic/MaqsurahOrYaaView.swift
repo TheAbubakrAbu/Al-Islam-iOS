@@ -227,7 +227,7 @@ struct MaqsurahOrYaaView: View {
             // Not Musa (2:53): WHY THE SMALL ALIF GOES sets that one beside 2:54.
             quranRow("\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649} \u{0671}\u{0628}\u{06E1}\u{0646}\u{064E} \u{0645}\u{064E}\u{0631}\u{06E1}\u{064A}\u{064E}\u{0645}\u{064E}",
                      reading: "'Eesabna maryama",
-                     note: String(localized: "'Isa son of Maryam (2:87): the same rule on a name, before a noun that opens with hamzatul waSl"))
+                     note: String(localized: "'Eesa son of Maryam (2:87): the same rule on a name, before a noun that opens with hamzatul waSl"))
         } header: {
             Text("ON ITS OWN: \u{0649}")
         } footer: {
@@ -245,7 +245,7 @@ struct MaqsurahOrYaaView: View {
                      note: String(localized: "With their devils (2:14)"))
             quranRow("\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670} \u{0644}\u{0650}\u{0642}\u{064E}\u{0648}\u{06E1}\u{0645}\u{0650}\u{0647}\u{0650}\u{06E6}",
                      reading: "Musaa liqawmihee",
-                     note: String(localized: "Musa to his people (2:54)"))
+                     note: String(localized: "Moosa to his people (2:54)"))
         } header: {
             Text("WITH ALIF SAGHEERAH: \u{0649}\u{0670}")
         } footer: {
@@ -257,13 +257,13 @@ struct MaqsurahOrYaaView: View {
         Section {
             quranRow("\u{0639}\u{064E}\u{0644}\u{064E}\u{0649}\u{0670}\u{0653} \u{0625}\u{0650}\u{0628}\u{06E1}\u{0631}\u{064E}\u{0670}\u{0647}\u{0650}\u{064A}\u{0645}\u{064E}",
                      reading: "'alaaa ibraaheema",
-                     note: String(localized: "To Ibrahim (3:84)"))
+                     note: String(localized: "To Ibraaheem (3:84)"))
             quranRow("\u{062D}\u{064E}\u{062A}\u{0651}\u{064E}\u{0649}\u{0670}\u{0653} \u{0625}\u{0650}\u{0630}\u{064E}\u{0627}",
                      reading: "Hattaaa idhaa",
                      note: String(localized: "Until, when (3:152)"))
             quranRow("\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670}\u{0653} \u{0623}\u{064E}\u{0631}\u{06E1}\u{0628}\u{064E}\u{0639}\u{0650}\u{064A}\u{0646}\u{064E}",
                      reading: "Musaaa arba'eena",
-                     note: String(localized: "Musa, forty (2:51)"))
+                     note: String(localized: "Moosa, forty (2:51)"))
 
             TajweedLessonLink(lessonID: "mudood-chart") {
                 Label("Learn the Madd Rules", systemImage: "book")
@@ -288,7 +288,7 @@ struct MaqsurahOrYaaView: View {
         Section {
             quranRow("\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0643}\u{0650}\u{062A}\u{064E}\u{0670}\u{0628}\u{064E} \u{00B7} \u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670} \u{0644}\u{0650}\u{0642}\u{064E}\u{0648}\u{06E1}\u{0645}\u{0650}\u{0647}\u{0650}\u{06E6}",
                      reading: "Musal-kitaaba \u{00B7} Musaa liqawmihee",
-                     note: String(localized: "Musa the Scripture \u{00B7} Musa to his people (2:53, 2:54): one name, one ayah apart, spelled two ways"))
+                     note: String(localized: "Moosa the Scripture \u{00B7} Moosa to his people (2:53, 2:54): one name, one ayah apart, spelled two ways"))
 
             Text("The letter after hamzatul waSl always has a sukoon or a shaddah, and Arabic never says a long vowel straight into one. So when you read on, the \u{201C}aa\u{201D} of alif maqSoorah is not said, and the small alif, the mark that shows that \u{201C}aa\u{201D}, is left off with it. A full letter stays written either way: \u{0641}\u{0650}\u{064A} \u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}\u{0631}\u{06E1}\u{0636}\u{0650} still prints the yaa of \u{0641}\u{0650}\u{064A}, though you say \u{201C}fil-arDi\u{201D} (2:11).")
                 .font(.body)
@@ -342,7 +342,7 @@ struct MaqsurahOrYaaView: View {
     private var sideBySideSection: some View {
         Section {
             quranRow("\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}\u{0670}", reading: "'Eesaa",
-                     note: String(localized: "'Isa (3:52): a yaa as the long \u{201C}ee\u{201D} in the middle, alif maqSoorah at the end"))
+                     note: String(localized: "'Eesa (3:52): a yaa as the long \u{201C}ee\u{201D} in the middle, alif maqSoorah at the end"))
             quranRow("\u{064A}\u{064E}\u{062D}\u{06E1}\u{064A}\u{064E}\u{0649}\u{0670}", reading: "Yahyaa",
                      note: String(localized: "Yahya (19:7): two yaas with fathas of their own, then alif maqSoorah"))
             quranRow("\u{0639}\u{064E}\u{0644}\u{064E}\u{0649}\u{0670} \u{00B7} \u{0639}\u{064E}\u{0644}\u{064E}\u{064A}\u{0651}\u{064E}", reading: "'alaa \u{00B7} 'alayya",
@@ -352,7 +352,7 @@ struct MaqsurahOrYaaView: View {
         } header: {
             Text("SIDE BY SIDE")
         } footer: {
-            Text("Drawn in the mushaf's own Uthmani hand, the way the Quran reader prints them, whatever your Arabic face is: in other faces a final yaa keeps its dots and the two never look alike.")
+            Text("Drawn in the mushaf's own Uthmaani hand, the way the Quran reader prints them, whatever your Arabic face is: in other faces a final yaa keeps its dots and the two never look alike.")
         }
     }
 
@@ -805,7 +805,7 @@ struct MaqsurahPracticeView: View {
              why: String(localized: "The small alif over it marks alif maqSoorah: the long \u{201C}aa\u{201D}.")),
         Item(arabic: "\u{0625}\u{0650}\u{0644}\u{064E}\u{0649}\u{0670}", reading: "ilaa", gloss: "to", reference: "2:142", kind: .dagger,
              why: String(localized: "A fatha on the laam before it and a small alif over it: alif maqSoorah.")),
-        Item(arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670}", reading: "Musaa", gloss: "Musa", reference: "2:54", kind: .dagger,
+        Item(arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670}", reading: "Musaa", gloss: "Moosa", reference: "2:54", kind: .dagger,
              why: String(localized: "A fatha on the seen before it and a small alif over it: alif maqSoorah.")),
         Item(arabic: "\u{0628}\u{064E}\u{0644}\u{064E}\u{0649}\u{0670}", reading: "balaa", gloss: "Yes", reference: "2:81", kind: .dagger,
              why: String(localized: "The small alif over it marks alif maqSoorah: \u{201C}balaa\u{201D}.")),
@@ -817,7 +817,7 @@ struct MaqsurahPracticeView: View {
              why: String(localized: "A fatha on the faa before it and a small alif over it: alif maqSoorah.")),
         Item(arabic: "\u{0647}\u{064F}\u{062F}\u{0657}\u{0649}", reading: "hudan", gloss: "guidance", reference: "2:2", kind: .bare,
              why: String(localized: "A tanween on the daal before it: alif maqSoorah on its own. Joined, it reads \u{201C}hudan\u{201D}; stop on it and it is \u{201C}hudaa\u{201D}.")),
-        Item(arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}\u{0670}", reading: "'Eesaa", gloss: "'Isa", reference: "3:52", kind: .dagger,
+        Item(arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}\u{0670}", reading: "'Eesaa", gloss: "'Eesa", reference: "3:52", kind: .dagger,
              why: String(localized: "The last letter carries a small alif: alif maqSoorah. The yaa in the middle, after a kasra, is the long \u{201C}ee\u{201D}.")),
         Item(arabic: "\u{064A}\u{064E}\u{062D}\u{06E1}\u{064A}\u{064E}\u{0649}\u{0670}", reading: "Yahyaa", gloss: "Yahya", reference: "19:7", kind: .dagger,
              why: String(localized: "A small alif over the last letter: alif maqSoorah. The two yaas before it carry fathas, so they are consonants.")),
@@ -856,10 +856,10 @@ struct MaqsurahPracticeView: View {
              reading: "'alal-malaaa'ikati", gloss: "to the angels", reference: "2:31", kind: .bare,
              why: String(localized: "Nothing over it, and the next word opens with hamzatul waSl: the long vowel drops and you read straight into the laam.")),
         Item(arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0643}\u{0650}\u{062A}\u{064E}\u{0670}\u{0628}\u{064E}",
-             reading: "Musal-kitaaba", gloss: "Musa the Scripture", reference: "2:53", kind: .bare,
+             reading: "Musal-kitaaba", gloss: "Moosa the Scripture", reference: "2:53", kind: .bare,
              why: String(localized: "Nothing over it, and hamzatul waSl next: not read when joined, \u{201C}Musal-kitaaba\u{201D}.")),
         Item(arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649} \u{0671}\u{0628}\u{06E1}\u{0646}\u{064E}",
-             reading: "'Eesabna", gloss: "'Isa, the son", reference: "2:87", kind: .bare,
+             reading: "'Eesabna", gloss: "'Eesa, the son", reference: "2:87", kind: .bare,
              why: String(localized: "Nothing over it, and hamzatul waSl next: the long vowel drops, \u{201C}'Eesabna\u{201D}.")),
         Item(arabic: "\u{0648}\u{064E}\u{062A}\u{064E}\u{0631}\u{064E}\u{0649} \u{0671}\u{0644}\u{06E1}\u{0645}\u{064F}\u{062C}\u{06E1}\u{0631}\u{0650}\u{0645}\u{0650}\u{064A}\u{0646}\u{064E}",
              reading: "wa taral-mujrimeena", gloss: "and you will see the criminals", reference: "14:49", kind: .bare,
@@ -871,13 +871,13 @@ struct MaqsurahPracticeView: View {
              reading: "ilaa shayaaTeenihim", gloss: "with their devils", reference: "2:14", kind: .dagger,
              why: String(localized: "A small alif with no madd sign: 2 counts.")),
         Item(arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670} \u{0644}\u{0650}\u{0642}\u{064E}\u{0648}\u{06E1}\u{0645}\u{0650}\u{0647}\u{0650}\u{06E6}",
-             reading: "Musaa liqawmihee", gloss: "Musa to his people", reference: "2:54", kind: .dagger,
+             reading: "Musaa liqawmihee", gloss: "Moosa to his people", reference: "2:54", kind: .dagger,
              why: String(localized: "A small alif over it and a laam next: 2 counts.")),
         Item(arabic: "\u{0628}\u{064E}\u{0644}\u{064E}\u{0649}\u{0670} \u{0648}\u{064E}\u{0644}\u{064E}\u{0670}\u{0643}\u{0650}\u{0646}",
              reading: "balaa wa laakin", gloss: "Yes, but", reference: "2:260", kind: .dagger,
              why: String(localized: "A small alif with no madd sign: 2 counts.")),
         Item(arabic: "\u{0639}\u{064E}\u{0644}\u{064E}\u{0649}\u{0670}\u{0653} \u{0625}\u{0650}\u{0628}\u{06E1}\u{0631}\u{064E}\u{0670}\u{0647}\u{0650}\u{064A}\u{0645}\u{064E}",
-             reading: "'alaaa ibraaheema", gloss: "to Ibrahim", reference: "3:84", kind: .madd,
+             reading: "'alaaa ibraaheema", gloss: "to Ibraaheem", reference: "3:84", kind: .madd,
              why: String(localized: "The madd sign over the small alif, and a hamza opens the next word: madd munfasil, 4 or 5 counts.")),
         Item(arabic: "\u{0625}\u{0650}\u{0644}\u{064E}\u{0649}\u{0670}\u{0653} \u{0623}\u{064E}\u{0634}\u{064E}\u{062F}\u{0651}\u{0650}",
              reading: "ilaaa ashaddi", gloss: "to the most severe", reference: "2:85", kind: .madd,
@@ -886,7 +886,7 @@ struct MaqsurahPracticeView: View {
              reading: "Hattaaa idhaa", gloss: "until, when", reference: "3:152", kind: .madd,
              why: String(localized: "The madd sign, then a hamza: madd munfasil, 4 or 5 counts.")),
         Item(arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}\u{0670}\u{0653} \u{0623}\u{064E}\u{0631}\u{06E1}\u{0628}\u{064E}\u{0639}\u{0650}\u{064A}\u{0646}\u{064E}",
-             reading: "Musaaa arba'eena", gloss: "Musa, forty", reference: "2:51", kind: .madd,
+             reading: "Musaaa arba'eena", gloss: "Moosa, forty", reference: "2:51", kind: .madd,
              why: String(localized: "The madd sign over the small alif, and a hamza next: 4 or 5 counts.")),
     ]
 }

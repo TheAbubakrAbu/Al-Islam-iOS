@@ -60,7 +60,7 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
         case .guides: return "How-To Guides"
         case .proving: return "Proving Islam"
         case .stories: return "Stories of the Prophets"
-        case .companions: return "Sahabah, Ahlul Bayt & Salaf"
+        case .companions: return "Sahaabah, Ahlul Bayt & Salaf"
         case .religions: return "Refuting Religions"
         case .preservation: return "Preservation of the Quran"
         case .hadithScience: return "Science of Hadith"
@@ -87,9 +87,9 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
     var subtitle: String {
         switch self {
         case .pillars: return "The Five Pillars and Six Beliefs"
-        case .guides: return "Wudu, salah, Jumuah, and more"
+        case .guides: return "Wudu, salaah, Jumuah, and more"
         case .proving: return "The complete case that Islam is true, one line of evidence at a time"
-        case .stories: return "From Adam to Isa, told from the Quran and sound hadith"
+        case .stories: return "From Aadam to Eesa, told from the Quran and sound hadith"
         case .companions: return "The Companions, the Prophet\u{2019}s household, and the early generations"
         case .religions: return "Other faiths and worldviews, answered fairly"
         case .preservation: return "How the Quran was revealed, memorised, written, and kept"
@@ -169,11 +169,11 @@ struct IslamArticleGroup: Identifiable {
         switch title {
         case "THE BASICS":                      return "questionmark.circle"
         case "THE 5 PILLARS OF ISLAM":          return "building.columns"
-        case "THE 6 PILLARS OF IMAN (FAITH)":   return "heart"
-        case "THE 3 PILLARS OF TAWHID":         return "hand.point.up"
+        case "THE 6 PILLARS OF EEMAAN (FAITH)":   return "heart"
+        case "THE 3 PILLARS OF TAWHEED":         return "hand.point.up"
         case "THE 25 PROPHETS NAMED IN THE QURAN": return "person.wave.2"
         case "THE THREE HOLY MOSQUES":          return "building.2"
-        case "QURAN & TAFSIR":                  return "book.closed"
+        case "QURAN & TAFSEER":                  return "book.closed"
         case "HADITH & ITS SCIENCES":           return "books.vertical"
         case "THE METHOD":                      return "scalemass"
         case "THE MESSENGER":                   return "person.fill.checkmark"
@@ -196,12 +196,12 @@ struct IslamArticleGroup: Identifiable {
         // The six libraries (2026-11-24).
         case "BEFORE THE STORIES":              return "book"
         case "THE FIRST PEOPLE":                return "figure.stand"
-        case "IBRAHIM AND HIS HOUSE":           return "flame"
+        case "IBRAAHEEM AND HIS HOUSE":           return "flame"
         case "PATIENCE AND RETURN":             return "hourglass"
-        case "MUSA AND BANI ISRA'IL":           return "water.waves"
+        case "MOOSA AND BANI ISRAA’EEL":           return "water.waves"
         case "THE PROPHETS OF ARABIA":          return "sun.dust"
-        case "THE KINGS AND PROPHETS OF BANI ISRA'IL": return "crown"
-        case "THE LAST OF BANI ISRA'IL":        return "star.and.crescent"
+        case "THE KINGS AND PROPHETS OF BANI ISRAA’EEL": return "crown"
+        case "THE LAST OF BANI ISRAA’EEL":        return "star.and.crescent"
         case "BEYOND THE QURAN":                return "questionmark.folder"
         case "THE SEAL OF THE PROPHETS":        return "seal"
         case "WHO THEY ARE":                    return "person.3"
@@ -251,11 +251,17 @@ enum IslamArticleCatalog {
                           emphasized: emphasized, aliases: aliases, linkHome: linkHome)
     }
 
+    /// `overview` is the page that introduces a counted set as a whole (THE 5 PILLARS OF ISLAM opens on
+    /// "Overview of the 5 Pillars"): it heads the group, in the accent, the way THE BASICS rows are set.
     private static func group(_ title: String, _ home: IslamArticleHome,
+                              overview: (id: String, title: String, key: String, aliases: [String])? = nil,
                               _ rows: [(id: String, title: String, key: String, aliases: [String])],
                               emphasized: Bool = false, foldedCount: Int? = nil,
                               linkHome: IslamArticleHome? = nil) -> IslamArticleGroup {
-        IslamArticleGroup(title: title, home: home, entries: rows.map {
+        let head = overview.map {
+            entry($0.id, $0.title, title, home, key: $0.key, emphasized: true, aliases: $0.aliases, linkHome: linkHome)
+        }
+        return IslamArticleGroup(title: title, home: home, entries: (head.map { [$0] } ?? []) + rows.map {
             entry($0.id, $0.title, title, home, key: $0.key, emphasized: emphasized, aliases: $0.aliases,
                   linkHome: linkHome)
         }, foldedCount: foldedCount)
@@ -306,14 +312,23 @@ enum IslamArticleCatalog {
             ("SunnahPillarView", "What is the Sunnah?", "sunnah", ["tradition", "way of the prophet"]),
             ("HadithPillarView", "What are Hadiths?", "hadith", ["narration", "ahadith", "bukhari", "muslim"]),
         ], emphasized: true),
-        group("THE 5 PILLARS OF ISLAM", .pillars, [
-            ("ShahadahView", "Shahadah (Testimony of Faith)", "shahadah", ["shahada", "testimony", "declaration"]),
-            ("SalahView", "Salah (Five Daily Prayers)", "salah", ["salat", "prayer", "namaz"]),
+        // Each counted set opens on its overview (Abu, 2026-11-26: "add an overview introduction navigation
+        // link only if consistent"): the five, the six, the three of tawhid and the three mosques. The mixed
+        // groups have none.
+        group("THE 5 PILLARS OF ISLAM", .pillars, overview: (
+            "FivePillarsOverviewView", "Overview of the 5 Pillars", "five-pillars",
+            ["five pillars", "5 pillars", "arkan al-islam", "pillars of islam", "islam is built on five",
+             "buniya al-islam", "hadith of jibril", "hadith jibril", "gabriel"]), [
+            ("ShahadahView", "Shahaadah (Testimony of Faith)", "shahadah", ["shahada", "testimony", "declaration"]),
+            ("SalahView", "Salaah (Five Daily Prayers)", "salah", ["salat", "prayer", "namaz"]),
             ("SawmView", "Sawm (Fasting in Ramadan)", "sawm", ["fasting", "fast", "ramadan", "siyam"]),
-            ("ZakahView", "Zakah (Annual Charity)", "zakah", ["zakat", "charity", "alms"]),
+            ("ZakahView", "Zakaah (Annual Charity)", "zakah", ["zakat", "charity", "alms"]),
             ("HajjView", "Hajj (Pilgrimage to Makkah)", "hajj", ["pilgrimage", "mecca", "kaaba"]),
         ]),
-        group("THE 6 PILLARS OF IMAN (FAITH)", .pillars, [
+        group("THE 6 PILLARS OF EEMAAN (FAITH)", .pillars, overview: (
+            "SixPillarsOverviewView", "Overview of the 6 Pillars of Eemaan", "six-pillars",
+            ["six pillars", "6 pillars", "arkan al-iman", "pillars of iman", "pillars of faith", "articles of faith",
+             "hadith of jibril", "hadith jibril", "branches of iman", "iman increases", "ihsan"]), [
             ("GodView", "Belief in Allah", "belief-allah", ["iman", "tawhid", "god"]),
             ("AngelsView", "Belief in the Angels", "angels", ["angel", "jibril", "gabriel", "malaikah"]),
             ("BooksView", "Belief in the Books", "books", ["scripture", "torah", "gospel", "psalms", "injil", "tawrah"]),
@@ -324,29 +339,35 @@ enum IslamArticleCatalog {
         // Abu, 2026-11-24: "add a section called three pillars of tawheed", beside the five pillars of
         // Islam and the six of iman. The scholars' word is aqsam, categories; each is a pillar in that
         // tawhid falls without it.
-        group("THE 3 PILLARS OF TAWHID", .pillars, [
-            ("RububiyyahView", "Tawhid ar-Rububiyyah (Lordship)", "rububiyyah",
+        group("THE 3 PILLARS OF TAWHEED", .pillars, overview: (
+            "ThreePillarsOverviewView", "Overview of the 3 Pillars of Tawheed", "three-pillars",
+            ["tawheed", "three pillars", "3 pillars", "categories of tawhid", "types of tawhid", "kinds of tawhid",
+             "aqsam at-tawhid", "rububiyyah", "uluhiyyah", "asma wa sifat", "19:65"]), [
+            ("RububiyyahView", "Tawheed ar-Ruboobiyyah (Lordship)", "rububiyyah",
              ["tawheed", "three pillars", "categories of tawhid", "types of tawhid", "lordship", "rabb", "lord",
               "creator", "creation", "khalq", "mulk", "tadbir", "fitrah", "qadariyyah", "amulet", "tamimah",
               "horoscope", "astrology", "fortune teller", "talbiyah of the pagans", "qawaid al-arba"]),
-            ("UluhiyyahView", "Tawhid al-Uluhiyyah (Worship)", "uluhiyyah",
+            ("UluhiyyahView", "Tawheed al-Uloohiyyah (Worship)", "uluhiyyah",
              ["tawheed", "three pillars", "categories of tawhid", "worship", "ibadah", "ibaadah", "ilah", "uloohiyyah",
               "uluhiyya", "ikhlas", "sincerity", "intercession", "shafaah", "tawassul", "istighathah", "graves",
               "dua is worship", "vow", "nadhr", "sacrifice", "wadd", "suwa", "two conditions"]),
-            ("AsmaSifatView", "Tawhid al-Asma\u{2019} was-Sifat (Names & Attributes)", "asma-sifat",
+            ("AsmaSifatView", "Tawheed al-Asma\u{2019} was-Sifaat (Names & Attributes)", "asma-sifat",
              ["tawheed", "three pillars", "categories of tawhid", "names and attributes", "asma wa sifat",
               "asma was sifat", "sifat", "attributes", "istiwa", "istawa", "throne", "arsh", "rising", "malik",
               "where is allah", "above the throne", "uluw", "tahrif", "tatil", "takyif", "tamthil", "tafwid",
               "tawil", "hand of allah", "seeing allah", "ruyah", "tadmuriyyah", "qawaid al-muthla"]),
         ]),
-        group("THE THREE HOLY MOSQUES", .pillars, [
-            ("HaramView", "Masjid Al-Haram (The Holy Mosque)", "haram", ["makkah", "mecca", "kaaba", "kabah"]),
+        group("THE THREE HOLY MOSQUES", .pillars, overview: (
+            "HolyMosquesOverviewView", "Overview of the Three Holy Mosques", "three-mosques",
+            ["three mosques", "holy mosques", "sacred mosques", "shadd ar-rihal", "journey", "travel to mosques",
+             "first mosque", "reward of prayer", "100000 prayers", "1000 prayers", "haram", "nabawi", "aqsa"]), [
+            ("HaramView", "Masjid Al-Haraam (The Holy Mosque)", "haram", ["makkah", "mecca", "kaaba", "kabah"]),
             ("NabawiView", "Masjid An-Nabawi (The Prophet\u{2019}s Mosque)", "nabawi", ["madinah", "medina", "prophet's mosque"]),
             ("AqsaView", "Masjid Al-Aqsa (The Farthest Mosque)", "aqsa", ["jerusalem", "quds", "palestine", "isra"]),
         ]),
-        group("QURAN & TAFSIR", .pillars, [
+        group("QURAN & TAFSEER", .pillars, [
             ("CompileView", "Compilation of the Quran", "compile", ["preservation", "uthman", "abu bakr", "mushaf"]),
-            ("TafsirView", "Tafsir (Exegesis)", "tafsir", ["commentary", "interpretation", "ibn kathir"]),
+            ("TafsirView", "Tafseer (Exegesis)", "tafsir", ["commentary", "interpretation", "ibn kathir"]),
             ("TajweedView", "Tajweed", "tajweed", ["recitation rules", "pronunciation"]),
             ("MuqattaatPillarView", "Muqatta\u{2019}at Letters", "muqattaat", ["muqattaat", "alif lam mim", "disjointed letters", "fawatih"]),
             ("QuranWordsPillarView", "The Words of the Quran", "quran-words",
@@ -361,7 +382,7 @@ enum IslamArticleCatalog {
              ["contradiction", "contradict", "contradictions", "different readings", "different qurans", "variants",
               "variant readings", "ikhtilaf", "tanawwu", "tadadd", "maliki", "maaliki", "arjulakum", "arjulikum",
               "yathurna", "rasm", "ibn al-jazari", "nashr", "4:82"]),
-            ("RiwayatDifferencesView", "How the Riwayat Differ on the Page", "riwayat-differences",
+            ("RiwayatDifferencesView", "How the Riwaayaat Differ on the Page", "riwayat-differences",
              ["hamzah", "hamza", "hamzat al-wasl", "wasl", "madani", "maghribi", "dot", "dots", "imalah", "taqlil",
               "tas-hil", "tashil", "ibdal", "naql", "silah", "warsh", "qalun", "qaloon", "susi", "duri", "abu jafar",
               "hamzah az-zayyat", "kisai", "orthography", "mushaf differences", "dabt",
@@ -392,25 +413,25 @@ enum IslamArticleCatalog {
             ("FarewellView", "The Farewell (Final) Sermon", "farewell", ["khutbah", "arafah", "last sermon"]),
             ("AhlulBaytView", "The Ahlul Bayt (People of the House)", "ahlulbayt", ["ahl al-bayt", "fatimah", "ali", "hasan", "husayn", "family of the prophet"]),
             ("WivesView", "The Wives of the Prophet", "wives", ["khadijah", "aisha", "aishah", "mothers of the believers", "ummahat"]),
-            ("SahabahView", "The Sahabah (Companions)", "sahabah", ["companions", "abu bakr", "umar", "uthman", "ali"]),
+            ("SahabahView", "The Sahaabah (Companions)", "sahabah", ["companions", "abu bakr", "umar", "uthman", "ali"]),
             ("CaliphatesView", "The Caliphates", "caliphates", ["khilafah", "caliph", "rashidun", "umayyad", "abbasid", "ottoman"]),
-            ("MadhabView", "The Madhahib of Fiqh (Schools of Law)", "madhab", ["madhhab", "hanafi", "maliki", "shafii", "hanbali", "fiqh", "jurisprudence"]),
-            ("AqeedahMadhabView", "The Madhahib of Aqeedah (Schools of Creed)", "aqeedah", ["aqidah", "creed", "athari", "ashari", "maturidi", "theology", "jahmiyyah", "qadariyyah", "mutazilah", "khawarij"]),
+            ("MadhabView", "The Madhaahib of Fiqh (Schools of Law)", "madhab", ["madhhab", "hanafi", "maliki", "shafii", "hanbali", "fiqh", "jurisprudence"]),
+            ("AqeedahMadhabView", "The Madhaahib of Aqeedah (Schools of Creed)", "aqeedah", ["aqidah", "creed", "athari", "ashari", "maturidi", "theology", "jahmiyyah", "qadariyyah", "mutazilah", "khawarij"]),
             ("AhlusSunnahView", "Ahl As-Sunnah Wal Jama\u{2019}ah", "ahlussunnah", ["ahlus sunnah", "sunni", "jamaah", "saved sect"]),
             ("FiqhAqeedahManhajView", "Fiqh, Aqeedah, and Manhaj", "manhaj", ["methodology", "fiqh", "creed"]),
         ]),
         group("SCHOLARS OF AHL AS-SUNNAH", .pillars, [
-            ("SahabahScholarsView", "The Scholars of the Sahabah", "sahabah-scholars", ["ibn abbas", "ibn masud", "ibn umar", "aishah", "zayd"]),
+            ("SahabahScholarsView", "The Scholars of the Sahaabah", "sahabah-scholars", ["ibn abbas", "ibn masud", "ibn umar", "aishah", "zayd"]),
             ("SalafScholarsView", "The Salaf and the Imams", "salaf", ["abu hanifah", "malik", "shafii", "ahmad", "imams", "tabiun"]),
-            ("TabariView", "Ibn Jarir at-Tabari", "tabari", ["tabari", "history", "tafsir"]),
+            ("TabariView", "Ibn Jareer at-Tabari", "tabari", ["tabari", "history", "tafsir"]),
             ("IbnTaymiyyahView", "Shaykh al-Islam Ibn Taymiyyah", "ibntaymiyyah", ["ibn taymiyya", "taymiyyah", "shaykh al islam"]),
             ("IbnQayyimView", "Ibn al-Qayyim", "ibnqayyim", ["ibn qayyim", "jawziyyah"]),
             ("DhahabiView", "Adh-Dhahabi", "dhahabi", ["dhahabi", "siyar"]),
-            ("IbnKathirView", "Ibn Kathir", "ibnkathir", ["ibn kathir", "tafsir", "bidayah"]),
+            ("IbnKathirView", "Ibn Katheer", "ibnkathir", ["ibn kathir", "tafsir", "bidayah"]),
             ("LaterScholarsView", "Later Scholars of the Sunnah", "later", ["ibn hajar", "nawawi", "albani", "ibn baz", "ibn uthaymin", "muhammad ibn abd al-wahhab"]),
         ]),
         group("SALAFIYYAH: THE WAY OF THE SALAF", .pillars, [
-            ("TawhidView", "Tawhid: The Oneness of Allah", "tawhid", ["tawheed", "oneness", "monotheism", "la ilaha illa allah",
+            ("TawhidView", "Tawheed: The Oneness of Allah", "tawhid", ["tawheed", "oneness", "monotheism", "la ilaha illa allah",
              "three pillars of tawhid"]),
             ("SalafiyyahView", "What is Salafiyyah?", "salafiyyah", ["salafi", "salafism", "wahhabi", "najd", "ibn abd al-wahhab", "salaf", "dhahabi"]),
             ("QuranSunnahView", "The Quran and the Sunnah", "quransunnah", ["two sources", "revelation", "evidence", "daleel"]),
@@ -441,14 +462,14 @@ enum IslamArticleCatalog {
     /// How-to guides, in the order the index shows them.
     static let guidesGroups: [IslamArticleGroup] = [
         group("HOW TO WORSHIP", .guides, [
-            ("HowToPrayView", "How to Pray (Salah)", "pray", ["salat", "prayer", "namaz", "rakah", "ruku", "sujud"]),
+            ("HowToPrayView", "How to Pray (Salaah)", "pray", ["salat", "prayer", "namaz", "rakah", "ruku", "sujud"]),
             ("HowToFastView", "How to Fast (Sawm)", "fast", ["fasting", "ramadan", "suhoor", "iftar", "siyam"]),
-            ("HowToZakahView", "How to Give Zakah", "zakah", ["zakat", "charity", "nisab", "2.5"]),
+            ("HowToZakahView", "How to Give Zakaah", "zakah", ["zakat", "charity", "nisab", "2.5"]),
             ("HowToHajjView", "How to Perform Hajj", "hajj", ["pilgrimage", "ihram", "tawaf", "arafah", "mina"]),
             ("HowToUmrahView", "How to Perform Umrah", "umrah", ["minor pilgrimage", "ihram", "tawaf", "sai"]),
         ]),
         group("PURIFICATION & PRAYER", .guides, [
-            ("WudhuView", "How to Make Wudhu", "wudhu", ["wudu", "ablution", "purification", "washing"]),
+            ("WudhuView", "How to Make Wudu", "wudhu", ["wudu", "ablution", "purification", "washing"]),
             ("GhuslView", "How to Make Ghusl", "ghusl", ["bath", "full ablution", "janabah", "ritual bath"]),
             ("TayammumView", "How to Make Tayammum", "tayammum", ["dry ablution", "no water", "earth", "dust", "sand"]),
             // Abu, 2026-11-24: "Awrah of men versus women"
@@ -459,18 +480,18 @@ enum IslamArticleCatalog {
             ("JumuahView", "How to Pray Jumuah", "jumuah", ["friday prayer", "jummah", "juma", "khutbah", "late for jumuah", "eid on friday"]),
             ("KhutbahView", "How to Give the Khutbah", "khutbah", ["khutba", "sermon", "friday sermon", "khatib", "minbar", "khutbat al-hajah", "amma bad", "imam"]),
             ("AdhanOtherView", "How to Give the Adhan", "adhan", ["azan", "call to prayer", "muadhin", "muezzin", "jumuah adhan", "first adhan", "tarji"]),
-            ("IqamahView", "How to Give the Iqamah", "iqamah", ["iqama", "second call"]),
+            ("IqamahView", "How to Give the Iqaamah", "iqamah", ["iqama", "second call"]),
         ]),
         group("MORE PRAYERS", .guides, [
             ("RawatibView", "How to Pray the Sunnah Prayers", "rawatib", ["rawatib", "nawafil", "voluntary", "twelve rakah", "before fajr"]),
             ("WitrView", "How to Pray Witr", "witr", ["qunut", "odd", "night", "last prayer"]),
             ("TahajjudView", "How to Pray Tahajjud", "tahajjud", ["night prayer", "qiyam", "qiyam al-layl", "last third"]),
             ("DuhaView", "How to Pray Duha", "duha", ["forenoon", "ishraq", "morning prayer", "chasht"]),
-            ("TaraweehView", "How to Pray Taraweeh", "taraweeh", ["tarawih", "ramadan night", "qiyam"]),
+            ("TaraweehView", "How to Pray Taraaweeh", "taraweeh", ["tarawih", "ramadan night", "qiyam"]),
             ("JanazahView", "How to Pray the Funeral Prayer", "janazah", ["janaza", "funeral", "death", "burial", "shroud", "kafan", "deceased"]),
             // The prayer and its dua are ONE guide (Abu, 2026-10-25: "merge them into one"); the dua page's
             // aliases live here so "dua istikhara" still lands on it.
-            ("IstikharahView", "How to Pray Istikharah", "istikharah", ["istikhara", "salat al-istikhara", "dua istikhara", "istikhara dua", "dua al-istikhara", "allahumma inni astakhiruka", "supplication", "decision", "guidance prayer", "choice"]),
+            ("IstikharahView", "How to Pray Istikhaarah", "istikharah", ["istikhara", "salat al-istikhara", "dua istikhara", "istikhara dua", "dua al-istikhara", "allahumma inni astakhiruka", "supplication", "decision", "guidance prayer", "choice"]),
         ]),
         group("PRAYER IN SPECIAL CASES", .guides, [
             ("TravelPrayerView", "How to Pray While Traveling", "travel", ["traveler", "qasr", "shorten", "combine", "jam", "journey", "plane"]),
@@ -484,12 +505,12 @@ enum IslamArticleCatalog {
               "time zones", "long haul", "wudu on a plane", "fasting on a plane"]),
             ("SickPrayerView", "How to Pray When Sick", "sick", ["illness", "sitting", "chair", "lying down", "hospital", "disabled"]),
             ("MissedPrayerView", "How to Make Up Missed Prayers", "missed", ["qada", "make up", "forgot", "slept", "overslept"]),
-            ("SujudSahwView", "How to Perform Sujud as-Sahw", "sahw", ["sujud sahw", "forgetfulness", "prostration of forgetfulness", "doubt", "mistake in prayer"]),
+            ("SujudSahwView", "How to Perform Sujood as-Sahw", "sahw", ["sujud sahw", "forgetfulness", "prostration of forgetfulness", "doubt", "mistake in prayer"]),
         ]),
         group("FASTING & CHARITY", .guides, [
             ("VoluntaryFastsView", "How to Fast Voluntary Fasts", "voluntary-fasts", ["monday", "thursday", "shawwal", "arafah", "ashura", "white days", "ayyam al-bid", "nafl fast"]),
-            ("ItikafView", "How to Perform I'tikaf", "itikaf", ["itikaf", "seclusion", "last ten nights", "laylat al-qadr", "mosque retreat"]),
-            ("ZakatFitrView", "How to Give Zakat al-Fitr", "zakat-fitr", ["fitrah", "fitra", "sadaqat al-fitr", "eid charity", "sa"]),
+            ("ItikafView", "How to Perform I‘tikaaf", "itikaf", ["itikaf", "seclusion", "last ten nights", "laylat al-qadr", "mosque retreat"]),
+            ("ZakatFitrView", "How to Give Zakaat al-Fitr", "zakat-fitr", ["fitrah", "fitra", "sadaqat al-fitr", "eid charity", "sa"]),
         ]),
         group("EID", .guides, [
             ("TakbiratView", "How to Pray Eid", "eid", ["eid prayer", "takbir", "takbirat", "eid al-fitr", "eid al-adha"]),
@@ -565,30 +586,30 @@ enum IslamArticleCatalog {
     /// reach them there. Their shared links keep the name they shipped with ("pillars.adam").
     static let prophetGroups: [IslamArticleGroup] = [
         group("THE 25 PROPHETS NAMED IN THE QURAN", .stories, [
-            ("ProphetAdamView", "Adam", "adam", ["first man", "father of mankind"]),
-            ("ProphetIdrisView", "Idris", "idris", ["enoch"]),
-            ("ProphetNuhView", "Nuh", "nuh", ["noah", "ark", "flood"]),
-            ("ProphetHudView", "Hud", "hud", ["aad", "ad", "ahqaf"]),
-            ("ProphetSalihView", "Salih", "salih", ["saleh", "thamud", "she-camel", "hijr"]),
-            ("ProphetIbrahimView", "Ibrahim", "ibrahim", ["abraham", "khalil", "kabah", "sacrifice"]),
-            ("ProphetLutView", "Lut", "lut", ["lot", "sodom"]),
-            ("ProphetIsmailView", "Ismail", "ismail", ["ishmael", "zamzam", "hajar"]),
-            ("ProphetIshaqView", "Ishaq", "ishaq", ["isaac", "sarah"]),
-            ("ProphetYaqubView", "Yaqub / Israil", "yaqub", ["jacob", "israil", "israel", "twelve tribes"]),
-            ("ProphetYusufView", "Yusuf", "yusuf", ["joseph", "egypt", "well", "dream"]),
-            ("ProphetAyyubView", "Ayyub", "ayyub", ["job", "patience", "illness"]),
+            ("ProphetAdamView", "Aadam", "adam", ["first man", "father of mankind"]),
+            ("ProphetIdrisView", "Idrees", "idris", ["enoch"]),
+            ("ProphetNuhView", "Nooh", "nuh", ["noah", "ark", "flood"]),
+            ("ProphetHudView", "Hood", "hud", ["aad", "ad", "ahqaf"]),
+            ("ProphetSalihView", "Saalih", "salih", ["saleh", "thamud", "she-camel", "hijr"]),
+            ("ProphetIbrahimView", "Ibraaheem", "ibrahim", ["abraham", "khalil", "kabah", "sacrifice"]),
+            ("ProphetLutView", "Loot", "lut", ["lot", "sodom"]),
+            ("ProphetIsmailView", "Ismaa‘eel", "ismail", ["ishmael", "zamzam", "hajar"]),
+            ("ProphetIshaqView", "Ishaaq", "ishaq", ["isaac", "sarah"]),
+            ("ProphetYaqubView", "Ya‘qoob / Israa’eel", "yaqub", ["jacob", "israil", "israel", "twelve tribes"]),
+            ("ProphetYusufView", "Yoosuf", "yusuf", ["joseph", "egypt", "well", "dream"]),
+            ("ProphetAyyubView", "Ayyoob", "ayyub", ["job", "patience", "illness"]),
             ("ProphetShuaybView", "Shu\u{2019}ayb", "shuayb", ["shuaib", "jethro", "madyan", "midian", "weights", "measures"]),
-            ("ProphetMusaView", "Musa", "musa", ["moses", "pharaoh", "firaun", "torah", "tuwa", "staff"]),
-            ("ProphetHarunView", "Harun", "harun", ["aaron", "calf"]),
+            ("ProphetMusaView", "Moosa", "musa", ["moses", "pharaoh", "firaun", "torah", "tuwa", "staff"]),
+            ("ProphetHarunView", "Haaroon", "harun", ["aaron", "calf"]),
             ("ProphetDhulKiflView", "Dhul-Kifl", "dhulkifl", ["dhu al-kifl", "zulkifl", "ezekiel"]),
-            ("ProphetDawudView", "Dawud", "dawud", ["david", "zabur", "psalms", "jalut", "goliath"]),
-            ("ProphetSulaymanView", "Sulayman", "sulayman", ["solomon", "sulaiman", "jinn", "sheba", "saba", "hoopoe", "ant"]),
-            ("ProphetIlyasView", "Ilyas", "ilyas", ["elias", "elijah", "bal"]),
+            ("ProphetDawudView", "Daawood", "dawud", ["david", "zabur", "psalms", "jalut", "goliath"]),
+            ("ProphetSulaymanView", "Sulaymaan", "sulayman", ["solomon", "sulaiman", "jinn", "sheba", "saba", "hoopoe", "ant"]),
+            ("ProphetIlyasView", "Ilyaas", "ilyas", ["elias", "elijah", "bal"]),
             ("ProphetAlyasaView", "Alyasa", "alyasa", ["elisha", "al-yasa"]),
-            ("ProphetYunusView", "Yunus", "yunus", ["jonah", "whale", "dhun-nun", "nineveh"]),
+            ("ProphetYunusView", "Yoonus", "yunus", ["jonah", "whale", "dhun-nun", "nineveh"]),
             ("ProphetZakariyaView", "Zakariya", "zakariya", ["zachariah", "zakariyya"]),
             ("ProphetYahyaView", "Yahya", "yahya", ["john the baptist"]),
-            ("ProphetIsaView", "Isa", "isa", ["jesus", "masih", "messiah", "injil", "maryam", "mary"]),
+            ("ProphetIsaView", "Eesa", "isa", ["jesus", "masih", "messiah", "injil", "maryam", "mary"]),
             ("ProphetMuhammadView", "Muhammad", "muhammad-prophet", ["final messenger", "seal of the prophets", "khatam"]),
         ], linkHome: .pillars),
     ]
@@ -610,73 +631,73 @@ enum IslamArticleCatalog {
                  ["nations", "peoples", "ad", "aad", "iram", "ahqaf", "thamud", "hijr", "madain salih", "hegra", "sodom", "mutafikat", "madyan", "midian", "aykah", "thicket", "pharaoh", "haman", "qarun", "korah", "nineveh", "ashab ar-rass", "tubba", "saba", "sheba"]),
         ]),
         library("THE FIRST PEOPLE", .stories, [
-            .new("StoryAdamView", "Adam", "adam",
+            .new("StoryAdamView", "Aadam", "adam",
                  ["abu al-bashar", "father of mankind", "hawwa", "eve", "iblis", "satan", "khalifah", "successor", "the names", "prostration", "the tree", "garden of eternity", "repentance", "qabil", "habil", "cain", "abel", "shith", "seth", "covenant", "alast", "fitrah", "adamah", "safiyyullah", "bani adam"]),
-            .new("StoryIdrisView", "Idris", "idris",
+            .new("StoryIdrisView", "Idrees", "idris",
                  ["enoch", "akhnukh", "hanokh", "idrees", "siddiq", "high station", "makanan aliyya", "fourth heaven", "miraj", "hermes", "jared", "methuselah", "israiliyyat", "ka'b al-ahbar"]),
-            .new("StoryNuhView", "Nuh", "nuh",
+            .new("StoryNuhView", "Nooh", "nuh",
                  ["noah", "noach", "ark", "flood", "deluge", "tufan", "judi", "al-judi", "ararat", "tannur", "wadd", "suwa", "yaghuth", "yauq", "nasr", "950 years", "surah nuh", "grateful servant", "first messenger", "ulul azm", "sam ham yafith", "shem", "japheth", "kanan", "yam"]),
         ]),
         library("THE PROPHETS OF ARABIA", .stories, [
-            .new("StoryHudView", "Hud", "hud",
+            .new("StoryHudView", "Hood", "hud",
                  ["ad", "aad", "‘ad", "iram", "ahqaf", "al-ahqaf", "barren wind", "dabur", "saba", "east wind", "eber", "abir", "hadramawt", "hood", "surah hud", "envoy of ad", "qayl", "ubar", "sarsar", "cloud", "grey hair", "shayyabatni"]),
-            .new("StorySalihView", "Salih", "salih",
+            .new("StorySalihView", "Saalih", "salih",
                  ["saleh", "thamud", "she-camel", "naqah", "naqat allah", "camel", "hijr", "al-hijr", "madain salih", "mada’in salih", "hegra", "al-ula", "tabuk", "qudar", "nine men", "sayhah", "rajfah", "omen", "tatayyur", "abu zamah"]),
             .new("StoryShuaybView", "Shu\u{2019}ayb", "shuayb",
                  ["shuaib", "shoaib", "shuayb", "jethro", "reuel", "hobab", "madyan", "midian", "aykah", "thicket", "laykah", "al-bad", "scales", "measure", "weights", "mutaffifin", "tatfif", "khatib al-anbiya", "zullah", "old man of madyan", "baqiyyatullah"]),
         ]),
-        library("IBRAHIM AND HIS HOUSE", .stories, [
-            .new("StoryIbrahimView", "Ibrahim", "ibrahim",
+        library("IBRAAHEEM AND HIS HOUSE", .stories, [
+            .new("StoryIbrahimView", "Ibraaheem", "ibrahim",
                  ["abraham", "abram", "ibraheem", "khalil", "khalilullah", "al-khalil", "azar", "terah", "sarah", "hajar", "namrud", "nimrod", "fire", "idols", "hanif", "millah", "suhuf", "scrolls of ibrahim", "ur", "babylon", "hebron", "father of the prophets", "four birds", "neither jew nor christian"]),
-            .new("StoryLutView", "Lut", "lut",
+            .new("StoryLutView", "Loot", "lut",
                  ["lot", "sodom", "sadum", "gomorrah", "mutafikat", "al-mutafikat", "overturned cities", "dead sea", "bahr lut", "qawm lut", "people of lut", "sijjil", "fahishah", "wife of lut", "daughters of lut", "ruknun shadid", "strong support", "haran"]),
             .new("StoryKabahView", "Isma\u{2019}il", "ismail-kabah",
                  ["ismail", "ishmael", "ismael", "yishmael", "hajar", "hagar", "zamzam", "safa", "marwah", "sa'y", "jurhum", "kaaba", "kabah", "sacrifice", "dhabih", "adh-dhabih", "maqam ibrahim", "eid al-adha", "nabit", "qaydar", "kedar", "adnan", "arabs", "hajj"]),
-            .new("StoryIshaqView", "Ishaq", "ishaq",
+            .new("StoryIshaqView", "Ishaaq", "ishaq",
                  ["isaac", "yitzhaq", "yitzhak", "ishak", "sarah", "laughter", "glad tidings", "bushra", "guests of ibrahim", "honoured guests", "rebekah", "rifqa", "esau", "al-is", "edom", "nafilah", "ghulam alim"]),
-            .new("StoryYaqubView", "Ya\u{2019}qub / Isra\u{2019}il", "yaqub",
+            .new("StoryYaqubView", "Ya\u{2019}qoob / Isra\u{2019}il", "yaqub",
                  ["yaqub", "jacob", "israel", "israil", "isra'il", "bani israil", "children of israel", "twelve tribes", "asbat", "al-asbat", "sabrun jamil", "beautiful patience", "leah", "rachel", "bilhah", "zilpah", "reuben", "judah", "levi", "binyamin", "benjamin", "dinah", "laban", "sciatica", "irq an-nasa"]),
-            .new("StoryYusufView", "Yusuf", "yusuf",
+            .new("StoryYusufView", "Yoosuf", "yusuf",
                  ["joseph", "yosef", "binyamin", "benjamin", "zulaykha", "zulaikha", "al-aziz", "potiphar", "rachel", "rahil", "eleven stars", "the well", "sabrun jamil", "beautiful patience", "as-siddiq", "ahsan al-qasas", "best of stories", "egypt", "famine", "the shirt", "seven cows", "dream interpretation", "al-karim ibn al-karim", "surah yusuf"]),
         ]),
         library("PATIENCE AND RETURN", .stories, [
-            .new("StoryAyyubView", "Ayyub", "ayyub",
+            .new("StoryAyyubView", "Ayyoob", "ayyub",
                  ["job", "ayub", "iyyov", "patience", "sabr", "awwab", "the spring", "golden locusts", "dighth", "bundle of grass", "oath", "rahmah", "his wife", "illness", "affliction", "worms", "book of job", "hawran", "esau"]),
-            .new("StoryYunusView", "Yunus", "yunus",
+            .new("StoryYunusView", "Yoonus", "yunus",
                  ["jonah", "yonah", "dhun-nun", "dhu an-nun", "sahib al-hut", "companion of the fish", "whale", "the fish", "matta", "amittai", "nineveh", "mosul", "gourd", "yaqtin", "la ilaha illa anta subhanaka", "dua of yunus", "mughadib", "surah yunus", "ibn matta"]),
         ]),
-        library("MUSA AND BANI ISRA'IL", .stories, [
-            .new("StoryMusaEarlyView", "Musa: From the River to the Fire", "musa-early",
+        library("MOOSA AND BANI ISRAA’EEL", .stories, [
+            .new("StoryMusaEarlyView", "Moosa: From the River to the Fire", "musa-early",
                  ["moses", "moshe", "kalimullah", "burning bush", "tuwa", "madyan", "midian", "staff", "white hand", "basket", "nile", "asiyah", "zipporah", "safura", "jethro", "imran", "amram", "jochebed", "miriam", "levi", "tawrah", "torah", "mount tur", "sinai"]),
-            .new("StoryMusaPharaohView", "Musa and Pharaoh", "musa-pharaoh",
+            .new("StoryMusaPharaohView", "Moosa and Pharaoh", "musa-pharaoh",
                  ["moses", "firaun", "fir'awn", "haman", "magicians", "sorcerers", "asiyah", "believer of pharaoh's family", "nine signs", "plagues", "red sea", "exodus", "ashura", "muharram", "drowning", "egypt", "tower", "istikhfaf"]),
-            .new("StoryHarunView", "Harun", "harun",
+            .new("StoryHarunView", "Haaroon", "harun",
                  ["aaron", "aharon", "wazir", "minister", "golden calf", "samiri", "sister of harun", "ukht harun", "safiyyah", "ali", "tabuk", "manzilah", "fifth heaven", "mount hor", "elisheba", "eleazar", "priesthood", "levi", "ibn umm"]),
             .new("StoryWildernessView", "Bani Isra\u{2019}il in the Wilderness", "wilderness",
                  ["children of israel", "bani israel", "golden calf", "samiri", "tih", "wandering", "forty years", "manna", "quails", "mann", "salwa", "twelve springs", "tablets", "seventy", "see allah", "cow", "baqarah", "qarun", "korah", "yusha", "joshua", "hittah", "red sand hill", "death of musa"]),
-            .new("StoryKhidrView", "Musa and al-Khidr", "khidr",
+            .new("StoryKhidrView", "Moosa and al-Khidr", "khidr",
                  ["khadir", "al-khadir", "khizr", "two seas", "majma al-bahrayn", "fish", "yusha", "joshua", "ship", "boy", "wall", "orphans", "ilm ladunni", "kahf", "surah kahf", "is khidr alive", "patience", "knowledge"]),
         ]),
-        library("THE KINGS AND PROPHETS OF BANI ISRA'IL", .stories, [
-            .new("StoryDawudView", "Dawud", "dawud",
+        library("THE KINGS AND PROPHETS OF BANI ISRAA’EEL", .stories, [
+            .new("StoryDawudView", "Daawood", "dawud",
                  ["david", "dawood", "daud", "zabur", "psalms", "talut", "saul", "jalut", "goliath", "armour", "chain mail", "iron", "mountains and birds", "awwab", "khalifah", "fast of dawud", "prayer of dawud", "sajdah sad", "two litigants", "jesse", "judah", "bathsheba", "tel dan"]),
-            .new("StorySulaymanView", "Sulayman", "sulayman",
+            .new("StorySulaymanView", "Sulaymaan", "sulayman",
                  ["solomon", "sulaiman", "suleiman", "shelomoh", "ant", "naml", "hoopoe", "hudhud", "sheba", "saba", "bilqis", "queen of sheba", "throne", "jinn", "ifrit", "wind", "harut", "marut", "magic", "staff", "horses", "bayt al-maqdis", "two mothers", "in sha allah"]),
-            .new("StoryIlyasView", "Ilyas", "ilyas",
+            .new("StoryIlyasView", "Ilyaas", "ilyas",
                  ["elijah", "elias", "ilyaas", "eliyahu", "baal", "ba'l", "il yasin", "al yasin", "baalbek", "ahab", "jezebel", "carmel", "tishbite", "khidr", "still alive", "chariot of fire"]),
             .new("StoryAlyasaView", "al-Yasa\u{2019}", "alyasa",
                  ["elisha", "alyasa", "al-yasa", "yasa", "al-laysa", "laysa", "elisha son of shaphat", "successor of ilyas", "akhyar", "faddalna", "banyas", "mantle"]),
             .new("StoryDhulKiflView", "Dhul-Kifl", "dhul-kifl",
                  ["dhul kifl", "zul kifl", "dhu al-kifl", "zulkifli", "kifl", "al-kifl", "ezekiel", "hizqil", "bishr", "pledge", "patient", "sabirin", "akhyar", "tomb of dhul kifl"]),
         ]),
-        library("THE LAST OF BANI ISRA'IL", .stories, [
+        library("THE LAST OF BANI ISRAA’EEL", .stories, [
             .new("StoryZakariyyaView", "Zakariyya", "zakariyya",
                  ["zakariya", "zakaria", "zechariah", "zacharias", "zekharyah", "carpenter", "mihrab", "prayer chamber", "guardian of maryam", "casting of pens", "lots", "kafalah", "barren wife", "elisabeth", "isha", "heir", "three nights silence", "sign of silence", "private supplication", "bayt al-maqdis", "yahya father"]),
             .new("StoryYahyaView", "Yahya", "yahya",
                  ["john", "john the baptist", "yuhanna", "yohanan", "baptist", "hasur", "sayyid", "samiyy", "hanan", "five commands", "five words", "cousins", "sons of maternal aunts", "second heaven", "herod", "salome", "son of zakariyya", "chaste", "wisdom as a child"]),
             .new("StoryMaryamView", "Maryam", "maryam",
                  ["mary", "mariam", "miriam", "virgin mary", "mother of jesus", "imran", "hannah", "anne", "wife of imran", "sister of harun", "sister of aaron", "siddiqah", "batul", "palm tree", "annunciation", "jibril", "mihrab", "muharrar", "best of women", "surah maryam", "joseph", "najran"]),
-            .new("StoryIsaView", "Isa", "isa",
+            .new("StoryIsaView", "Eesa", "isa",
                  ["jesus", "yeshua", "yasu", "messiah", "al-masih", "christ", "son of maryam", "ibn maryam", "kalimah", "word of allah", "ruh", "injil", "gospel", "disciples", "hawariyyun", "table", "maidah", "crucifixion", "not crucified", "raised", "second coming", "return of jesus", "dajjal", "damascus", "trinity"]),
         ]),
         library("THE SEAL OF THE PROPHETS", .stories, [
@@ -694,19 +715,19 @@ enum IslamArticleCatalog {
     /// Sahabah, Ahlul Bayt & Salaf, in the order its index shows it.
     static let companionsGroups: [IslamArticleGroup] = [
         library("WHO THEY ARE", .companions, [
-            .new("CompanionsIntroView", "Who Are the Sahabah?", "who",
+            .new("CompanionsIntroView", "Who Are the Sahaabah?", "who",
                  ["sahabi", "sahaba", "companions", "ashab", "adalah", "udul", "best generation", "qarn", "salaf", "muhajirun", "ansar", "badr", "ahl badr", "bayat ar-ridwan", "pledge of ridwan", "hudaybiyah", "people of the tree", "do not revile my companions", "mujtahid", "camel", "siffin", "hawd", "usayhabi", "rafidah", "muawiyah"]),
             .existing("SahabahView"),
             .existing("AhlusSunnahView"),
         ]),
         library("THE RIGHTLY GUIDED CALIPHS", .companions, [
-            .new("CompanionAbuBakrView", "Abu Bakr as-Siddiq", "abu-bakr",
+            .new("CompanionAbuBakrView", "Abu Bakr as-Siddeeq", "abu-bakr",
                  ["abubakar", "siddiq", "siddique", "atiq", "abdullah ibn uthman", "abu quhafah", "cave of thawr", "thani ithnayn", "hijrah", "ibn ad-daghinah", "bilal", "khalil", "saqifah", "banu saidah", "khalifat rasul allah", "riddah", "ridda wars", "apostasy wars", "musaylimah", "yamamah", "usamah", "mistah"]),
-            .new("CompanionUmarView", "Umar ibn al-Khattab", "umar",
+            .new("CompanionUmarView", "Umar ibn al-Khattaab", "umar",
                  ["omar", "farooq", "faruq", "al-faruq", "abu hafs", "amir al-muminin", "muhaddath", "agreements with revelation", "diwan", "hijri calendar", "qadisiyyah", "yarmuk", "jerusalem", "al-quds", "year of ashes", "ramadah", "amwas", "abu lulu", "tarawih", "black stone", "sasanian", "kisra"]),
-            .new("CompanionUthmanView", "Uthman ibn Affan", "uthman",
+            .new("CompanionUthmanView", "Uthmaan ibn Affaan", "uthman",
                  ["usman", "othman", "osman", "dhun-nurayn", "dhul nurain", "two lights", "ruqayyah", "umm kulthum", "well of rumah", "bir rumah", "army of hardship", "jaysh al-usrah", "tabuk", "mushaf", "uthmani mushaf", "hudhayfah", "zayd ibn thabit", "day of the house", "yawm ad-dar", "siege", "al-walid ibn uqbah", "banu umayyah"]),
-            .new("CompanionAliView", "Ali ibn Abi Talib", "ali",
+            .new("CompanionAliView", "Ali ibn Abi Taalib", "ali",
                  ["aly", "imam ali", "abu turab", "abu al-hasan", "abu talib", "fatimah", "khaybar", "banner", "harun", "aaron", "tabuk", "ghadir khumm", "mawla", "man kuntu mawlahu", "thaqalayn", "yemen", "khawarij", "kharijites", "haruriyyah", "nahrawan", "ibn muljam", "kufah", "nawasib", "city of knowledge"]),
             .existing("CaliphatesView"),
         ]),
@@ -715,11 +736,11 @@ enum IslamArticleCatalog {
                  ["ashara mubashshara", "asharah mubashsharah", "mubashsharun", "ten promised jannah", "talha", "talhah ibn ubaydullah", "zubair", "zubayr ibn al-awwam", "abdur rahman ibn auf", "abd al-rahman ibn awf", "saad ibn abi waqqas", "sa'd", "said ibn zayd", "saeed ibn zaid", "abu ubaidah", "abu ubaydah ibn al-jarrah", "amin of this ummah", "hawari", "shura", "bilal", "thabit ibn qays", "ukkashah", "abdullah ibn salam", "qadisiyyah", "amwas plague"]),
         ]),
         library("AHLUL BAYT: THE PROPHET'S HOUSEHOLD", .companions, [
-            .new("CompanionKhadijahAishahView", "Khadijah and A\u{2019}ishah", "khadijah-aishah",
+            .new("CompanionKhadijahAishahView", "Khadeejah and A\u{2019}ishah", "khadijah-aishah",
                  ["khadija", "khadijah bint khuwaylid", "aisha", "aishah", "ayesha", "aisha bint abi bakr", "mothers of the believers", "umm al-muminin", "ummahat al-muminin", "ifk", "slander", "surah an-nur", "hira", "waraqah", "house of qasab", "tharid", "battle of the camel", "jamal", "year of sorrow", "wives of the prophet"]),
-            .new("CompanionFatimahView", "Fatimah, al-Hasan and al-Husayn", "fatimah",
+            .new("CompanionFatimahView", "Faatimah, al-Hasan and al-Husayn", "fatimah",
                  ["fatima", "fatimah az-zahra", "zahra", "hasan", "hussain", "husain", "husayn ibn ali", "ahl al-kisa", "people of the cloak", "hadith al-kisa", "mubahalah", "ayah of purification", "karbala", "ashura", "muharram", "yazid", "zayn al-abidin", "year of unity", "am al-jamaah", "leaders of the youth of paradise", "sayyidat nisa ahl al-jannah", "tasbih fatimah"]),
-            .new("CompanionUnclesView", "Hamzah, al-Abbas and Ja\u{2019}far", "hamzah-abbas",
+            .new("CompanionUnclesView", "Hamzah, al-Abbaas and Ja\u{2019}far", "hamzah-abbas",
                  ["hamza", "hamzah ibn abd al-muttalib", "sayyid ash-shuhada", "leader of the martyrs", "wahshi", "uhud", "abbas", "al-abbas ibn abd al-muttalib", "istisqa", "rain prayer", "tawassul", "jafar", "jafar ibn abi talib", "jafar at-tayyar", "dhul-janahayn", "two wings", "mutah", "negus", "najashi", "abyssinia", "habasha", "abu talib", "abu lahab", "surah al-masad", "uncles of the prophet"]),
             .existing("AhlulBaytView"),
             .existing("WivesView"),
@@ -734,7 +755,7 @@ enum IslamArticleCatalog {
             .existing("SahabahScholarsView"),
         ]),
         library("THE SALAF AFTER THEM", .companions, [
-            .new("CompanionTabiunView", "The Tabi\u{2019}un", "tabiun",
+            .new("CompanionTabiunView", "The Taabi\u{2019}un", "tabiun",
                  ["tabiun", "tabi'un", "tabiin", "tabi'in", "successors", "uways al-qarani", "uwais", "said ibn al-musayyib", "hasan al-basri", "ibn sirin", "mujahid", "said ibn jubayr", "umar ibn abd al-aziz", "zuhri", "urwah ibn az-zubayr", "atba at-tabiin", "sufyan ath-thawri", "awzai", "layth ibn sad", "ibn al-mubarak", "mujaddid", "renewer", "mukhadram", "hajjaj"]),
             .new("CompanionFourImamsView", "The Four Imams", "four-imams",
                  ["abu hanifa", "abu hanifah", "imam malik", "malik ibn anas", "shafii", "ash-shafi'i", "imam shafi", "ahmad ibn hanbal", "imam ahmad", "hanafi", "maliki", "shafi'i school", "hanbali", "madhhab", "madhab", "muwatta", "risalah", "musnad ahmad", "mihnah", "created quran", "khalq al-quran", "usul al-fiqh", "taqlid", "golden chain"]),
@@ -748,7 +769,7 @@ enum IslamArticleCatalog {
         library("THE METHOD", .religions, [
             .new("ReligionsMethodView", "How the Quran Argues With Other Faiths", "method",
                  ["dawah", "debate", "jadal", "hikmah", "mubahalah", "munazarah", "hujjah", "burhan", "dialogue", "interfaith", "heraclius", "najran", "people of the book", "ahl al-kitab", "common word", "ibrahim", "abraham", "namrud", "nimrod", "al-jawab as-sahih", "hidayat al-hayara", "ibn taymiyyah", "ibn al-qayyim", "apologetics"]),
-            .new("ReligionsOneView", "One Religion From Adam to Muhammad", "one-religion",
+            .new("ReligionsOneView", "One Religion From Aadam to Muhammad", "one-religion",
                  ["islam", "submission", "tawhid", "hanif", "hunafa", "din", "shariah", "shirah", "minhaj", "brothers", "allat", "covenant of the prophets", "mithaq", "primordial monotheism", "fitrah", "wadd", "suwa", "yaqub", "jacob", "abraham", "millah", "name muslim", "mohammedan", "noah"]),
             .new("ReligionsPluralismView", "Are All Religions the Same?", "pluralism",
                  ["religious pluralism", "perennialism", "perennial philosophy", "traditionalism", "john hick", "schuon", "guenon", "elephant", "many paths", "unity of religions", "wahdat al-adyan", "interfaith", "salvation", "exclusivism", "2:62", "5:69", "sabians", "ahl al-fatrah", "people of the interval", "message never reached", "la ikraha", "al-kafirun", "lakum dinukum", "permanent committee", "abrahamic"]),
@@ -795,11 +816,11 @@ enum IslamArticleCatalog {
             .new("PreservationWritingView", "Written in His Lifetime", "writing",
                  ["scribes of revelation", "kuttab al-wahy", "zayd ibn thabit", "katib", "writing the quran", "parchment", "palm stalks", "shoulder blade", "usub", "likhaf", "riqa", "do not write from me", "writing hadith", "suhuf", "mushaf", "muawiyah", "hanzalah", "abu shah", "two covers", "daffatayn"]),
             .existing("CompileView"),
-            .new("PreservationOrderView", "The Order of the Ayat and Surahs", "order",
+            .new("PreservationOrderView", "The Order of the Aayaat and Surahs", "order",
                  ["tartib", "arrangement", "sequence", "surah order", "ayah order", "tawqifi", "order of revelation", "chronological order", "mufassal", "mathani", "seven long surahs", "tiwal", "miun", "at-tawbah", "basmalah", "bismillah", "surah 9", "ayah count", "munasabah", "ibn az-zubayr", "ibn masud mushaf"]),
         ]),
         library("THE MUSHAF ACROSS THE CENTURIES", .preservation, [
-            .new("PreservationScriptView", "Dots, Vowels and the Uthmani Script", "script",
+            .new("PreservationScriptView", "Dots, Vowels and the Uthmaani Script", "script",
                  ["rasm", "uthmani rasm", "i'jam", "ijam", "naqt", "tashkil", "harakat", "abu al-aswad ad-duali", "duali", "al-khalil ibn ahmad", "farahidi", "nasr ibn asim", "yahya ibn yamur", "al-muqni", "ad-dani", "juz", "hizb", "ayah numbers", "madinah mushaf", "king fahd complex", "uthman taha", "cairo 1924", "diacritics", "quran spelling"]),
             .new("PreservationManuscriptsView", "The Oldest Manuscripts", "manuscripts",
                  ["birmingham quran", "mingana", "tubingen", "tübingen", "radiocarbon", "carbon dating", "sanaa palimpsest", "sana'a", "codex parisino-petropolitanus", "deroche", "topkapi", "samarkand", "tashkent", "uthman's mushaf", "hijazi script", "kufic", "corpus coranicum", "bergstrasser", "van putten", "wansbrough", "parchment", "palimpsest"]),
@@ -829,7 +850,7 @@ enum IslamArticleCatalog {
                  ["muallaq", "mursal", "munqati", "mudal", "tadlis", "mudallis", "ananah", "mursal khafi", "taliq", "taghliq", "broken chain", "missing link", "hisham ibn ammar", "maazif", "baqiyyah", "abu az-zubayr", "mustakhraj", "ibn ishaq", "taswiyah", "marasil"]),
             .new("HadithScienceRijalView", "The Narrators and Their Critics", "rijal",
                  ["rijal", "jarh", "tadil", "jarh wa tadil", "adalah", "dabt", "thiqah", "saduq", "taqrib", "tahdhib", "mizan", "ibn hajar", "dhahabi", "ibn main", "shubah", "yahya al-qattan", "ibn abi hatim", "narrator criticism", "backbiting", "mukhtalit", "innovators"]),
-            .new("HadithScienceAhadView", "Mutawatir, Ahad and Belief", "ahad",
+            .new("HadithScienceAhadView", "Mutawaatir, Ahad and Belief", "ahad",
                  ["khabar al-wahid", "single narrator", "single report", "aqidah", "creed", "tawatur", "mutawatir lafzi", "mutawatir manawi", "kalam", "mutazilah", "zann", "certainty", "risalah", "ibn al-qayyim", "sawaiq", "albani", "talaqqi bil-qabul", "quba qiblah", "muadh yemen", "fatimah bint qais"]),
         ]),
         library("THE TEXT AND ITS FORGERS", .hadithScience, [
@@ -971,19 +992,41 @@ enum IslamArticleCatalog {
     }
 
     /// The article page. With a `section`, the page scrolls to that heading as it appears (see
-    /// `ArticleHeader` and `selectableArticleList`).
+    /// `ArticleHeader` and `selectableArticleList`). `order` is the index the row sits in, the pages its
+    /// Previous | Next pair walks (`ArticlePager`); nil walks the article's own home.
     @MainActor
-    static func destination(_ entry: IslamArticleEntry, section: String? = nil) -> AnyView {
-        destination(id: entry.id, section: section)
+    static func destination(_ entry: IslamArticleEntry, section: String? = nil,
+                            order: ArticleReadingOrder? = nil) -> AnyView {
+        destination(id: entry.id, section: section, order: order)
     }
 
     /// `long` opens the page in full whatever the setting: a search hit in words only the full article
     /// has (ArticleLength.swift).
+    ///
+    /// On the phone every article opens inside an `ArticlePager`, so the Previous | Next pair at its foot
+    /// turns to the next page in place, the way the surah reader turns surahs (Abu, 2026-11-26: "For
+    /// every article add a [previous] and next button at the bottom and don't make it open a new page").
     @MainActor
-    static func destination(id: String, section: String? = nil, long: Bool = false) -> AnyView {
-        guard let view = IslamArticles.destination(for: id) else {
-            return AnyView(Text(verbatim: AppLanguage.article("Article not found")).foregroundColor(.secondary))
-        }
+    static func destination(id: String, section: String? = nil, long: Bool = false,
+                            order: ArticleReadingOrder? = nil) -> AnyView {
+        #if os(iOS)
+        guard IslamArticles.has(id) else { return notFound }
+        return AnyView(ArticlePager(id: id, order: order ?? .home(of: id), section: section, long: long))
+        #else
+        guard let view = IslamArticles.destination(for: id) else { return notFound }
+        return page(view, id: id, section: section, long: long)
+        #endif
+    }
+
+    @MainActor
+    private static var notFound: AnyView {
+        AnyView(Text(verbatim: AppLanguage.article("Article not found")).foregroundColor(.secondary))
+    }
+
+    /// One article page with its landing: the heading it opens on, and whether it opens in full. The
+    /// pager draws each page it turns to through this too.
+    @MainActor
+    static func page(_ view: AnyView, id: String, section: String?, long: Bool) -> AnyView {
         // Declared open by id, so a `door` row further down the stack that leads back here greys
         // out (`ArticleDoorRow`): articles that cite each other could be pushed without end.
         if let section, !section.isEmpty {
@@ -996,6 +1039,238 @@ enum IslamArticleCatalog {
         return AnyView(view.environment(\.articleScrollTarget, nil).openScreen(.islamArticle, id: id))
     }
 }
+
+// MARK: - Previous and Next
+
+/// The pages an article's Previous | Next pair walks, in order: the index the article was opened from,
+/// its groups read straight through, so Next from Hajj is Belief in Allah the way the index lists it.
+struct ArticleReadingOrder: Equatable {
+    let ids: [String]
+
+    /// The rows of `groups` in their order, each article once (Stories of the Prophets lists Muhammad's
+    /// page in two of its groups).
+    init(_ groups: [IslamArticleGroup]) {
+        var seen: Set<String> = []
+        ids = groups.flatMap(\.entries).map(\.id).filter { seen.insert($0).inserted }
+    }
+
+    /// The index an article lives in, for a page opened from anywhere else (a search result, a door, a
+    /// citation): its home's groups. A prophet's own page walks the 25 prophets, the list Stories of the
+    /// Prophets shows it in; a story walks the stories. An id no index lists walks nothing.
+    static func home(of id: String) -> ArticleReadingOrder {
+        if IslamArticleCatalog.prophetGroups.contains(where: { $0.entries.contains { $0.id == id } }) {
+            return ArticleReadingOrder(IslamArticleCatalog.prophetGroups)
+        }
+        guard let entry = IslamArticleCatalog.byID[id] else { return ArticleReadingOrder([]) }
+        return ArticleReadingOrder(entry.home == .stories ? IslamArticleCatalog.storiesGroups
+                                                          : IslamArticleCatalog.groups(for: entry.home))
+    }
+
+    /// The pages either side of `id`; nil past either end. Both nil when the order does not hold it.
+    func neighbours(of id: String) -> (previous: IslamArticleEntry?, next: IslamArticleEntry?) {
+        guard let index = ids.firstIndex(of: id) else { return (nil, nil) }
+        let previous = index > ids.startIndex ? IslamArticleCatalog.byID[ids[index - 1]] : nil
+        let next = index + 1 < ids.endIndex ? IslamArticleCatalog.byID[ids[index + 1]] : nil
+        return (previous, next)
+    }
+
+    /// Whether the pair has anywhere to go: the order holds this page and at least one other. The pair
+    /// shows on that, not on THIS page having a neighbour, so the first and last pages keep both slots
+    /// with the dead one dimmed (the surah reader's rule, see `ArticlePagePair`).
+    func walks(_ id: String) -> Bool { ids.count > 1 && ids.contains(id) }
+}
+
+/// What an article's foot needs to turn the page: which page the pager is showing, its neighbours, and
+/// the turn itself. Set by `ArticlePager`, read by `ArticlePagerSection`.
+struct ArticlePageTurn {
+    /// A page either side: what the pair says under Previous or Next, and the id it turns to.
+    struct Neighbour {
+        let id: String
+        let title: String
+    }
+
+    /// The page on show. The pair draws only on that page, so an article drawn some other way inside a
+    /// pager's environment (a pushed screen inherits it) never shows a pair that turns a page it is not.
+    let current: String
+    let previous: Neighbour?
+    let next: Neighbour?
+    let turn: (String) -> Void
+}
+
+private struct ArticlePageTurnKey: EnvironmentKey {
+    static let defaultValue: ArticlePageTurn? = nil
+}
+
+extension EnvironmentValues {
+    var articlePageTurn: ArticlePageTurn? {
+        get { self[ArticlePageTurnKey.self] }
+        set { self[ArticlePageTurnKey.self] = newValue }
+    }
+}
+
+#if os(iOS)
+/// One article at a time, turned in place: the pair at the foot of the page swaps the page for its
+/// neighbour in the index rather than pushing it, and Back still returns to the index, the way the surah
+/// reader swaps surahs (`navigateToSurah`) and a hadith chapter swaps chapters.
+///
+/// The page is rebuilt whole on a turn (`.id`), so it opens at its literal top with its own short or full
+/// version, search bar and title, as if it had been opened from the index. Only the first page keeps the
+/// landing it was opened with (a heading from a search result, the full version for a hit only it has).
+struct ArticlePager: View {
+    let order: ArticleReadingOrder
+    let section: String?
+    let long: Bool
+
+    @State private var current: String
+    /// Set at the first turn: the landing belonged to the page that was opened, not to the ones after it.
+    @State private var turned = false
+
+    init(id: String, order: ArticleReadingOrder, section: String?, long: Bool) {
+        self.order = order
+        self.section = section
+        self.long = long
+        _current = State(initialValue: id)
+    }
+
+    var body: some View {
+        let neighbours = order.neighbours(of: current)
+        Group {
+            if let view = IslamArticles.destination(for: current) {
+                IslamArticleCatalog.page(view, id: current, section: turned ? nil : section, long: !turned && long)
+            }
+        }
+        .environment(\.articlePageTurn, order.walks(current)
+            ? ArticlePageTurn(current: current,
+                              previous: neighbours.previous.map { .init(id: $0.id, title: $0.title) },
+                              next: neighbours.next.map { .init(id: $0.id, title: $0.title) },
+                              turn: turn)
+            : nil)
+        .id(current)
+    }
+
+    private func turn(to id: String) {
+        guard id != current, IslamArticles.has(id) else { return }
+        Settings.shared.hapticFeedback()
+        turned = true
+        current = id
+    }
+}
+
+/// The same in-place turning for pages that are not catalog articles: a prophecy, a miracle of the
+/// Prophet, a sunnah. `pages` is the library's own order and `page` draws one by its id; each page ends
+/// in an `ArticlePagerSection` naming that id.
+struct ArticleSequencePager<Page: View>: View {
+    let pages: [ArticlePageTurn.Neighbour]
+    let page: (String) -> Page
+
+    @State private var current: String
+
+    init(id: String, pages: [ArticlePageTurn.Neighbour], @ViewBuilder page: @escaping (String) -> Page) {
+        self.pages = pages
+        self.page = page
+        _current = State(initialValue: id)
+    }
+
+    var body: some View {
+        let index = pages.firstIndex { $0.id == current }
+        page(current)
+            .environment(\.articlePageTurn, index.flatMap { at in
+                pages.count > 1 ? ArticlePageTurn(current: current,
+                                                  previous: at > 0 ? pages[at - 1] : nil,
+                                                  next: at + 1 < pages.count ? pages[at + 1] : nil,
+                                                  turn: turn) : nil
+            })
+            .id(current)
+    }
+
+    private func turn(to id: String) {
+        guard id != current, pages.contains(where: { $0.id == id }) else { return }
+        Settings.shared.hapticFeedback()
+        current = id
+    }
+}
+#endif
+
+/// The foot of every catalog article: Previous | Next, the surah reader's pair (`surahNavigationButtonPair`),
+/// turning the page in place. `ArticleSourcesSection`, the last section of every article, draws it, so no
+/// page has to remember to. Nothing outside a pager, and nothing on the watch.
+struct ArticlePagerSection: View {
+    @Environment(\.articlePageTurn) private var pageTurn
+    let article: String
+
+    var body: some View {
+        #if os(iOS)
+        if let pageTurn, pageTurn.current == article {
+            Section {
+                ArticlePagePair(pageTurn: pageTurn)
+            }
+        }
+        #endif
+    }
+}
+
+#if os(iOS)
+/// Previous on the left, Next on the right, each with the neighbour's title under it. BOTH slots always
+/// render: at the index's ends the dead direction stays, dimmed, with "First Article" / "Last Article"
+/// where a title would be, so it reads as "nothing before this" and not as a missing button
+/// (`reader-prev-next-pair`). Plain buttons, one per slot: two links in one row would both fire.
+private struct ArticlePagePair: View {
+    @Environment(\.appearance) private var appearance
+    let pageTurn: ArticlePageTurn
+
+    var body: some View {
+        HStack(spacing: 10) {
+            slot(title: "Previous", target: pageTurn.previous, endNote: "First Article",
+                 systemImage: "chevron.backward", trailing: false)
+            slot(title: "Next", target: pageTurn.next, endNote: "Last Article",
+                 systemImage: "chevron.forward", trailing: true)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func slot(title: String, target: ArticlePageTurn.Neighbour?, endNote: String,
+                      systemImage: String, trailing: Bool) -> some View {
+        Button {
+            if let target { pageTurn.turn(target.id) }
+        } label: {
+            HStack(spacing: 10) {
+                if !trailing { chevron(systemImage, enabled: target != nil) }
+
+                VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
+                    Text(verbatim: AppLanguage.article(title))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(target != nil ? .primary : .secondary)
+
+                    Text(verbatim: AppLanguage.article(target?.title ?? endNote))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(trailing ? .trailing : .leading)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
+
+                if trailing { chevron(systemImage, enabled: target != nil) }
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(target == nil)
+        .opacity(target == nil ? 0.55 : 1)
+        .accessibilityLabel(Text(verbatim: AppLanguage.article(target.map { "\(title): \($0.title)" } ?? endNote)))
+    }
+
+    /// The chevron in a soft accent disc, the surah reader's `surahNavigationChevron`.
+    private func chevron(_ systemImage: String, enabled: Bool) -> some View {
+        Image(systemName: systemImage)
+            .font(.footnote.weight(.bold))
+            .foregroundColor(enabled ? appearance.accent : .secondary)
+            .frame(width: 28, height: 28)
+            .background(Circle().fill((enabled ? appearance.accent : Color.secondary).opacity(0.16)))
+    }
+}
+#endif
 
 // MARK: - Index rows
 
@@ -1016,11 +1291,13 @@ struct IslamArticleIndexSections: View {
     }
 
     var body: some View {
+        // The pages an article opened here turns through: this index, in its order.
+        let order = ArticleReadingOrder(groups)
         ForEach(groups) { group in
             let folded = group.foldedCount.map { $0 < group.entries.count && !unfolded.contains(group.id) } ?? false
             Section(header: Text(group.title)) {
                 ForEach(folded ? Array(group.entries.prefix(group.foldedCount ?? 0)) : group.entries) { entry in
-                    row(entry, icon: group.systemImage)
+                    row(entry, icon: group.systemImage, order: order)
                 }
 
                 if group.foldedCount.map({ $0 < group.entries.count }) == true {
@@ -1069,8 +1346,8 @@ struct IslamArticleIndexSections: View {
     /// shape; THE BASICS keeps its accent, as the entry point it is, but at the same size as its
     /// neighbours.
     @ViewBuilder
-    private func row(_ entry: IslamArticleEntry, icon: String) -> some View {
-        let link = NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
+    private func row(_ entry: IslamArticleEntry, icon: String, order: ArticleReadingOrder) -> some View {
+        let link = NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry, order: order) }) {
             HStack(spacing: 12) {
                 AccentIconChip(systemImage: icon, size: 29)
 
@@ -2766,885 +3043,914 @@ enum IslamSearchDebug {
 enum ArticleSources {
     static let table: [String: [ArticleSource]] = [
         "GodPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Miftah Dar as-Sa'adah", subtitle: "Ibn al-Qayyim, on knowledge, design, and the proofs of the Creator"),
-            ArticleSource(title: "Dar' Ta'arud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, revelation and reason do not conflict"),
-            ArticleSource(title: "Kashf ash-Shubuhat", subtitle: "Muhammad ibn Abd al-Wahhab"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Miftaah Daar as-Sa‘aadah", subtitle: "Ibn al-Qayyim, on knowledge, design, and the proofs of the Creator"),
+            ArticleSource(title: "Daar' Ta‘aarud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, revelation and reason do not conflict"),
+            ArticleSource(title: "Kashf ash-Shubuhaat", subtitle: "Muhammad ibn Abd al-Wahhaab"),
             ArticleSource(title: "Existence of God: Any Evidence?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/26745"),
             ArticleSource(title: "Evidence of the Oneness of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13532"),
         ],
         "IslamPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the three fundamental principles"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Tafsir as-Sa'di", subtitle: "Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the three fundamental principles"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Tafseer as-Sa‘di", subtitle: "Tayseer al-Kareem ar-Rahman"),
             ArticleSource(title: "What Is Islam?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10446"),
             ArticleSource(title: "The Only Religion in the Sight of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/287024"),
         ],
         "MuslimPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the three fundamental principles"),
-            ArticleSource(title: "Sharh Usul al-Iman", subtitle: "Ibn al-Uthaymin, on the six pillars of faith"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the three fundamental principles"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
             ArticleSource(title: "Islam and Muslims", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20756"),
             ArticleSource(title: "What Are the Pillars of Islam?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13569"),
         ],
         "AllahPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Qawa'id al-Muthla", subtitle: "Ibn al-Uthaymin, on the names and attributes of Allah"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Qawaa‘id al-Muthla", subtitle: "Ibn al-Uthaymeen, on the names and attributes of Allah"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
             ArticleSource(title: "Importance of knowing the Beautiful Names of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/4043"),
             ArticleSource(title: "Important questions about the beliefs of Ahl as-Sunnah concerning the names and attributes of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/155478"),
         ],
         "NamesOfAllahPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari 2736 and Sahih Muslim 2677, with the graded Sunan"),
-            ArticleSource(title: "Al-Qawa'id al-Muthla", subtitle: "Ibn al-Uthaymin, the rules governing the names and attributes of Allah"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, on Sahih al-Bukhari 2736 and the enumeration"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari 2736 and Saheeh Muslim 2677, with the graded Sunan"),
+            ArticleSource(title: "Al-Qawaa‘id al-Muthla", subtitle: "Ibn al-Uthaymeen, the rules governing the names and attributes of Allah"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, on Saheeh al-Bukhaari 2736 and the enumeration"),
             ArticleSource(title: "Importance of knowing the Beautiful Names of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/4043"),
             ArticleSource(title: "The 99 Names of Allah", subtitle: "Al-Asma al-Husna with transliteration and meanings", url: "https://99namesofallah.name/"),
         ],
         "QuranPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "Muqaddimah fi Usul at-Tafsir", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "Muqaddimah fi Usool at-Tafseer", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "Is the Quran the Word of Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13804"),
-            ArticleSource(title: "Miraculous aspects of the Holy Qur'an", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/245475"),
+            ArticleSource(title: "Miraculous aspects of the Holy Quran", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/245475"),
         ],
         "QuranRevealedPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar, on the Book of the Beginning of Revelation in Sahih al-Bukhari"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "Al-Jawab as-Sahih", subtitle: "Ibn Taymiyyah, on the proofs of prophethood"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar, on the Book of the Beginning of Revelation in Saheeh al-Bukhaari"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "Al-Jawaab as-Saheeh", subtitle: "Ibn Taymiyyah, on the proofs of prophethood"),
             ArticleSource(title: "Is the Quran the Word of Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13804"),
             ArticleSource(title: "What Is the Evidence that Islam Is True?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175339"),
         ],
         "ProphetPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ar-Raheeq al-Makhtum (The Sealed Nectar)", subtitle: "Safi ar-Rahman al-Mubarakpuri"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ar-Raheeq al-Makhtoom (The Sealed Nectar)", subtitle: "Safi ar-Rahman al-Mubarakpuri"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
             ArticleSource(title: "Who Is Muhammad?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11575"),
             ArticleSource(title: "Muhammad (peace and blessings of Allah be upon him) is the Seal of the Prophets and Messengers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/113393"),
         ],
         "SunnahPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Miftah al-Jannah fil-Ihtijaj bis-Sunnah", subtitle: "As-Suyuti, on the authority of the Sunnah"),
-            ArticleSource(title: "I'lam al-Muwaqqi'in", subtitle: "Ibn al-Qayyim, on following evidence over men"),
-            ArticleSource(title: "Raf' al-Malam an al-A'immah al-A'lam", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Miftaah al-Jannah fil-Ihtijaaj bis-Sunnah", subtitle: "As-Suyooti, on the authority of the Sunnah"),
+            ArticleSource(title: "I‘laam al-Muwaqqi‘een", subtitle: "Ibn al-Qayyim, on following evidence over men"),
+            ArticleSource(title: "Raf' al-Malaam an al-A’immah al-A‘laam", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "Justification for following the Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/604"),
-            ArticleSource(title: "If the Quran is perfect and complete and contains everything needed for the laws and regulations of sharee'ah, what need is there for the Sunnah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/93111"),
+            ArticleSource(title: "If the Quran is perfect and complete and contains everything needed for the laws and regulations of sharee‘ah, what need is there for the Sunnah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/93111"),
         ],
         "HadithPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "The Muqaddimah of Sahih Muslim", subtitle: "Imam Muslim on the isnad and the rejection of weak reports"),
-            ArticleSource(title: "Nukhbat al-Fikar", subtitle: "Ibn Hajar al-Asqalani, hadith terminology, with Nuzhat an-Nazar"),
-            ArticleSource(title: "Silsilat al-Ahadith as-Sahihah", subtitle: "Al-Albani"),
-            ArticleSource(title: "Categories of hadeeth", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/126978"),
-            ArticleSource(title: "Guidelines for distinguishing a saheeh hadeeth from a da'eef one", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/140158"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Muqaddimah of Saheeh Muslim", subtitle: "Imam Muslim on the isnaad and the rejection of weak reports"),
+            ArticleSource(title: "Nukhbat al-Fikar", subtitle: "Ibn Hajar al-Asqalaani, hadith terminology, with Nuzhat an-Nazar"),
+            ArticleSource(title: "Silsilat al-Ahaadeeth as-Saheehah", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Categories of hadith", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/126978"),
+            ArticleSource(title: "Guidelines for distinguishing a saheeh hadith from a da‘eef one", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/140158"),
         ],
         "ShahadahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the three fundamental principles"),
-            ArticleSource(title: "Kashf ash-Shubuhat", subtitle: "Muhammad ibn Abd al-Wahhab"),
-            ArticleSource(title: "What Are the Conditions of La Ilaha Illa-Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12295"),
-            ArticleSource(title: "Meaning of \"la ilaha illa Allah Muhammadun Rasul Allah\"", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/179"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the three fundamental principles"),
+            ArticleSource(title: "Kashf ash-Shubuhaat", subtitle: "Muhammad ibn Abd al-Wahhaab"),
+            ArticleSource(title: "What Are the Conditions of La Ilaaha Illa-Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12295"),
+            ArticleSource(title: "Meaning of \"la ilaaha illallah Muhammadun Rasool Allah\"", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/179"),
         ],
         "SalahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sifat Salat an-Nabi", subtitle: "Al-Albani, the Prophet's prayer described from the sahih hadith"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sifaat Salaat an-Nabi", subtitle: "Al-Albaani, the Prophet's prayer described from the saheeh hadith"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
             ArticleSource(title: "Importance of Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12305"),
             ArticleSource(title: "The virtue of one who regularly offers the five daily prayers and does them as enjoined", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/238527"),
         ],
         "SawmView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
             ArticleSource(title: "Virtues of Ramadan", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13480"),
             ArticleSource(title: "Is Fasting Compulsory?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/26814"),
         ],
         "ZakahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Categories of Zakah Recipients", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/46209"),
-            ArticleSource(title: "How to Calculate Zakah on Money Earned during the Year", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/93414"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Categories of Zakaah Recipients", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/46209"),
+            ArticleSource(title: "How to Calculate Zakaah on Money Earned during the Year", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/93414"),
         ],
         "HajjView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "At-Tahqiq wal-Idah", subtitle: "Ibn Baz, on Hajj and Umrah"),
-            ArticleSource(title: "Manasik al-Hajj wal-Umrah", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "At-Tahqeeq wal-Eedaah", subtitle: "Ibn Baaz, on Hajj and Umrah"),
+            ArticleSource(title: "Manaasik al-Hajj wal-Umrah", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
             ArticleSource(title: "Hajj: Its Virtues and Benefits", subtitle: "IslamQA", url: "https://islamqa.info/en/articles/77"),
             ArticleSource(title: "The reason why it is prescribed for Muslims to perform Hajj once in a lifetime", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22466"),
         ],
         "GodView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Qawa'id al-Muthla", subtitle: "Ibn al-Uthaymin, on the names and attributes of Allah"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Qawaa‘id al-Muthla", subtitle: "Ibn al-Uthaymeen, on the names and attributes of Allah"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
             ArticleSource(title: "What Is the Meaning of Belief in Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34630"),
-            ArticleSource(title: "What Is the Meaning of Tawhid?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49030"),
+            ArticleSource(title: "What Is the Meaning of Tawheed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49030"),
         ],
         "AngelsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Usul al-Iman", subtitle: "Ibn al-Uthaymin, on the six pillars of faith"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Aqidah at-Tahawiyyah", subtitle: "At-Tahawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Aqeedah at-Tahaawiyyah", subtitle: "At-Tahaawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
             ArticleSource(title: "Reality of Belief in the Angels", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/9477"),
             ArticleSource(title: "Angels in Islam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/843"),
         ],
         "BooksView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Usul al-Iman", subtitle: "Ibn al-Uthaymin, on the six pillars of faith"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Aqidah at-Tahawiyyah", subtitle: "At-Tahawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Aqeedah at-Tahaawiyyah", subtitle: "At-Tahaawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
             ArticleSource(title: "Belief in the Books of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/9519"),
             ArticleSource(title: "Have the Torah and Gospel Been Changed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2001"),
         ],
         "ProphetsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Usul al-Iman", subtitle: "Ibn al-Uthaymin, on the six pillars of faith"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Aqidah at-Tahawiyyah", subtitle: "At-Tahawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Aqeedah at-Tahaawiyyah", subtitle: "At-Tahaawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
             ArticleSource(title: "What Is Belief in the Messengers?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/8929"),
             ArticleSource(title: "Belief in the Prophets and Messengers is one of the pillars of faith, not belief in the Messengers only", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/138141"),
         ],
         "ProphetAdamView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "The Story of Adam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/223583"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "The Story of Aadam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/223583"),
         ],
         "ProphetIdrisView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "Stories of the Prophets and Isra\u{2019}iliyyat reports", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/43012"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "Stories of the Prophets and Isra\u{2019}eeliyyaat reports", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/43012"),
         ],
         "ProphetNuhView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "The Story of Nuh and the Flood", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175671"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "The Story of Nooh and the Flood", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175671"),
         ],
         "ProphetHudView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetSalihView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetIbrahimView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "Who was the sacrificed son, Ismail or Ishaq?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/106742"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "Who was the sacrificed son, Ismaa‘eel or Ishaaq?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/106742"),
         ],
         "ProphetLutView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "The People of Lut and their punishment", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/38622"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "The People of Loot and their punishment", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/38622"),
         ],
         "ProphetIsmailView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetIshaqView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetYaqubView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetYusufView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetAyyubView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetShuaybView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "Was the father-in-law of Musa the prophet Shu\u{2019}ayb?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/170696"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "Was the father-in-law of Moosa the prophet Shu\u{2019}ayb?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/170696"),
         ],
         "ProphetMusaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "The Story of Musa and Pharaoh", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/166187"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "The Story of Moosa and Pharaoh", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/166187"),
         ],
         "ProphetHarunView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetDhulKiflView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
             ArticleSource(title: "Was Dhul-Kifl a prophet?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/128203"),
         ],
         "ProphetDawudView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetSulaymanView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "Sulayman was free of magic", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12578"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "Sulaymaan was free of magic", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12578"),
         ],
         "ProphetIlyasView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetAlyasaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetYunusView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "The Dua of Dhun-Nun", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/145067"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "The Dua of Dhun-Noon", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/145067"),
         ],
         "ProphetZakariyaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetYahyaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
         ],
         "ProphetIsaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
             ArticleSource(title: "Islam\u{2019}s belief about Jesus (peace be upon him)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12615"),
         ],
         "ProphetMuhammadView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on the ayat of each prophet\u{2019}s account"),
-            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Kathir, the stories of the prophets, drawn from al-Bidayah wan-Nihayah"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on the aayaat of each prophet\u{2019}s account"),
+            ArticleSource(title: "Qasas al-Anbiya\u{2019}", subtitle: "Ibn Katheer, the stories of the prophets, drawn from al-Bidaayah wan-Nihaayah"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
             ArticleSource(title: "The finality of the prophethood of Muhammad", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/113676"),
         ],
         "DayView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Usul al-Iman", subtitle: "Ibn al-Uthaymin, on the six pillars of faith"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Aqidah at-Tahawiyyah", subtitle: "At-Tahawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Aqeedah at-Tahaawiyyah", subtitle: "At-Tahaawi, with the commentary of Ibn Abi al-Izz al-Hanafi"),
             ArticleSource(title: "The reality of belief in the Last Day", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13994"),
             ArticleSource(title: "What Will Happen on the Day Of Resurrection?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/220511"),
         ],
         "QadarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Usul al-Iman", subtitle: "Ibn al-Uthaymin, on the six pillars of faith"),
-            ArticleSource(title: "Shifa' al-Alil", subtitle: "Ibn al-Qayyim, on divine decree"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Shifaa’ al-Aleel", subtitle: "Ibn al-Qayyim, on divine decree"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
             ArticleSource(title: "What Is Qadar in Islam?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34732"),
-            ArticleSource(title: "Al-Qada wal Qadar according to Ahl al-Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49004"),
+            ArticleSource(title: "Al-Qada wal Qadar according to Ahl as-Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49004"),
+        ],
+        // The overviews of the counted sets (2026-11-26).
+        "FivePillarsOverviewView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Jaami‘ al-Uloom wal-Hikam", subtitle: "Ibn Rajab, on the hadith of Jibreel and “Islam is built on five” (hadith 2 and 3 of an-Nawawi's Forty)"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the second principle: Islam, eemaan and ihsaan"),
+            ArticleSource(title: "Sharh Thalaathat al-Usool", subtitle: "Ibn al-Uthaymeen, the pillars of Islam with their evidence"),
+        ],
+        "SixPillarsOverviewView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Usool al-Eemaan", subtitle: "Ibn al-Uthaymeen, on the six pillars of faith"),
+            ArticleSource(title: "Kitaab al-Eemaan", subtitle: "Ibn Taymiyyah, on eemaan and Islam said together and apart, and how eemaan rises and falls (Majmoo‘ al-Fataawa, vol. 7)"),
+            ArticleSource(title: "Jaami‘ al-Uloom wal-Hikam", subtitle: "Ibn Rajab, on the hadith of Jibreel (hadith 2 of an-Nawawi's Forty)"),
+            ArticleSource(title: "What Is the Meaning of Belief in Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34630"),
+        ],
+        "ThreePillarsOverviewView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalaathat al-Usool", subtitle: "Ibn al-Uthaymeen, the definitions of the three categories of tawheed (Majmoo‘ Fataawa wa Rasaa’il, vol. 6)"),
+            ArticleSource(title: "Al-Qawaa‘id al-Arba'", subtitle: "Muhammad ibn Abd al-Wahhaab, that the idolaters affirmed Allah's Lordship"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "What Is the Meaning of Tawheed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49030"),
+            ArticleSource(title: "Dividing Tawheed into categories", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10262"),
+        ],
+        "HolyMosquesOverviewView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Does the Multiplied Prayer Reward Apply to All of the Haram (sanctuary)?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/124812"),
+            ArticleSource(title: "The Importance of Al-Quds for Muslims", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7726"),
         ],
         "RububiyyahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Thalathat al-Usul", subtitle: "Ibn al-Uthaymin, the definitions of the three categories of tawhid (Majmu' Fatawa wa Rasa'il, vol. 6)"),
-            ArticleSource(title: "Al-Qawa'id al-Arba'", subtitle: "Muhammad ibn Abd al-Wahhab, the first principle"),
-            ArticleSource(title: "At-Tadmuriyyah", subtitle: "Ibn Taymiyyah, that no people held two equal makers (Majmu' al-Fatawa, vol. 3)"),
-            ArticleSource(title: "What Is Tawhid Al-Rububiyyah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49025"),
-            ArticleSource(title: "Dividing Tawhid into categories", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10262"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalaathat al-Usool", subtitle: "Ibn al-Uthaymeen, the definitions of the three categories of tawheed (Majmoo‘ Fataawa wa Rasaa’il, vol. 6)"),
+            ArticleSource(title: "Al-Qawaa‘id al-Arba'", subtitle: "Muhammad ibn Abd al-Wahhaab, the first principle"),
+            ArticleSource(title: "At-Tadmuriyyah", subtitle: "Ibn Taymiyyah, that no people held two equal makers (Majmoo‘ al-Fataawa, vol. 3)"),
+            ArticleSource(title: "What Is Tawheed Ar-Ruboobiyyah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49025"),
+            ArticleSource(title: "Dividing Tawheed into categories", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10262"),
         ],
         "UluhiyyahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Thalathat al-Usul", subtitle: "Ibn al-Uthaymin, the definitions of the three categories of tawhid (Majmu' Fatawa wa Rasa'il, vol. 6)"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the kinds of worship"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with al-Qawl al-Mufid by Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Ubudiyyah", subtitle: "Ibn Taymiyyah, the definition of worship"),
-            ArticleSource(title: "Madarij as-Salikin", subtitle: "Ibn al-Qayyim, the two kinds of tawhid (vol. 3)"),
-            ArticleSource(title: "Al-Ikhlas wan-Niyyah", subtitle: "Ibn Abi ad-Dunya, al-Fudayl ibn Iyad on the sincere and correct deed"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalaathat al-Usool", subtitle: "Ibn al-Uthaymeen, the definitions of the three categories of tawheed (Majmoo‘ Fataawa wa Rasaa’il, vol. 6)"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the kinds of worship"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with al-Qawl al-Mufeed by Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Uboodiyyah", subtitle: "Ibn Taymiyyah, the definition of worship"),
+            ArticleSource(title: "Madaarij as-Saalikeen", subtitle: "Ibn al-Qayyim, the two kinds of tawheed (vol. 3)"),
+            ArticleSource(title: "Al-Ikhlaas wan-Niyyah", subtitle: "Ibn Abi ad-Dunya, al-Fudayl ibn Iyaad on the sincere and correct deed"),
             ArticleSource(title: "Conditions of Acceptability of Deeds by Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/14258"),
             ArticleSource(title: "The real meaning of ‘uboodiyyah (true submission to Allah)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49016"),
         ],
         "AsmaSifatView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sharh Thalathat al-Usul", subtitle: "Ibn al-Uthaymin, the definitions of the three categories of tawhid (Majmu' Fatawa wa Rasa'il, vol. 6)"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "At-Tadmuriyyah", subtitle: "Ibn Taymiyyah, the two principles on the attributes (Majmu' al-Fatawa, vol. 3)"),
-            ArticleSource(title: "Al-Qawa'id al-Muthla", subtitle: "Ibn al-Uthaymin, the rules on the names and attributes of Allah"),
-            ArticleSource(title: "Al-Asma' was-Sifat and Sharh Usul I'tiqad Ahl as-Sunnah", subtitle: "Al-Bayhaqi and al-Lalaka'i, the statements of the Salaf with their chains"),
-            ArticleSource(title: "Ash-Shari'ah and Mukhtasar al-'Uluw", subtitle: "Al-Ajurri; and adh-Dhahabi's al-'Uluw abridged by al-Albani, with his gradings"),
-            ArticleSource(title: "Dar' Ta'arud al-'Aql wan-Naql", subtitle: "Ibn Taymiyyah, on tafwid (vol. 1)"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sharh Thalaathat al-Usool", subtitle: "Ibn al-Uthaymeen, the definitions of the three categories of tawheed (Majmoo‘ Fataawa wa Rasaa’il, vol. 6)"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "At-Tadmuriyyah", subtitle: "Ibn Taymiyyah, the two principles on the attributes (Majmoo‘ al-Fataawa, vol. 3)"),
+            ArticleSource(title: "Al-Qawaa‘id al-Muthla", subtitle: "Ibn al-Uthaymeen, the rules on the names and attributes of Allah"),
+            ArticleSource(title: "Al-Asmaa’ was-Sifaat and Sharh Usool I‘tiqaad Ahl as-Sunnah", subtitle: "Al-Bayhaqi and al-Laalakaa’i, the statements of the Salaf with their chains"),
+            ArticleSource(title: "Ash-Sharee‘ah and Mukhtasar al-Uluw", subtitle: "Al-Aajurri; and adh-Dhahabi's al-Uluw abridged by al-Albaani, with his gradings"),
+            ArticleSource(title: "Daar' Ta‘aarud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, on tafweed (vol. 1)"),
             ArticleSource(title: "How to Understand the Names and Attributes of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/178915"),
             ArticleSource(title: "Meaning of tafweed with regard to the names and attributes of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/138920"),
             ArticleSource(title: "Is Allah above the Throne?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11035"),
         ],
         "HaramView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
-            ArticleSource(title: "Iqtida' as-Sirat al-Mustaqim", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "Does the Multiplied Prayer Reward Apply to All of the Haram (sanctuary)?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/124812"),
             ArticleSource(title: "Righteous deeds in Makkah are better than those done elsewhere, but we do not know to what degree they are better, except in the case of prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/118128"),
         ],
         "NabawiView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
-            ArticleSource(title: "Iqtida' as-Sirat al-Mustaqim", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "Etiquette of Visiting the Prophet's Mosque", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34464"),
             ArticleSource(title: "Islamic Guidelines for Visitors to the Prophet's Mosque", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36863"),
         ],
         "AqsaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
-            ArticleSource(title: "Iqtida' as-Sirat al-Mustaqim", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "The Importance of Al-Quds for Muslims", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7726"),
             ArticleSource(title: "Is al-Masjid al-Aqsa considered to be a sanctuary?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34751"),
         ],
         "CompileView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
-            ArticleSource(title: "Fada'il al-Quran in Sahih al-Bukhari", subtitle: "The chapters on the collection of the Quran"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
-            ArticleSource(title: "An-Nashr fi al-Qira'at al-'Ashr", subtitle: "Ibn al-Jazari, on the Uthmanic copies and why they were left without dots"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf (vol. 13)"),
-            ArticleSource(title: "'Uthmaan's compilation of the Mushaf in one style (harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125091"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti"),
+            ArticleSource(title: "Fadaa’il al-Quran in Saheeh al-Bukhaari", subtitle: "The chapters on the collection of the Quran"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
+            ArticleSource(title: "An-Nashr fi al-Qiraa’aat al-Ashr", subtitle: "Ibn al-Jazari, on the Uthmanic copies and why they were left without dots"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf (vol. 13)"),
+            ArticleSource(title: "Uthmaan's compilation of the Mushaf in one style (harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125091"),
             ArticleSource(title: "Who Wrote the Quran?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10012"),
         ],
         "TafsirView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Muqaddimah fi Usul at-Tafsir", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "Tafsir at-Tabari", subtitle: "Jami' al-Bayan fi Ta'wil al-Quran"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Muqaddimah fi Usool at-Tafseer", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "Tafseer at-Tabari", subtitle: "Jaami‘ al-Bayaan fi Ta’weel al-Quran"),
             ArticleSource(title: "The principles of tafseer (Quranic exegesis)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/287146"),
             ArticleSource(title: "Tafseer on the basis of narrated texts and tafseer on the basis of individual understanding", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/205290"),
         ],
         "TajweedView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "Al-Muqaddimah al-Jazariyyah", subtitle: "Ibn al-Jazari, the rules of recitation in verse"),
-            ArticleSource(title: "At-Tamhid fi Ilm at-Tajwid", subtitle: "Ibn al-Jazari"),
-            ArticleSource(title: "An-Nashr fil-Qira'at al-Ashr", subtitle: "Ibn al-Jazari"),
-            ArticleSource(title: "Is It Obligatory to Read the Quran with Tajwid?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125106"),
-            ArticleSource(title: "She resolved to memorize the Quran but was told to learn Tajwid first", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/84312"),
+            ArticleSource(title: "At-Tamheed fi Ilm at-Tajweed", subtitle: "Ibn al-Jazari"),
+            ArticleSource(title: "An-Nashr fil-Qiraa’aat al-Ashr", subtitle: "Ibn al-Jazari"),
+            ArticleSource(title: "Is It Obligatory to Read the Quran with Tajweed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125106"),
+            ArticleSource(title: "She resolved to memorize the Quran but was told to learn Tajweed first", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/84312"),
         ],
         "QuranWordsPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Iqtida' as-Sirat al-Mustaqim", subtitle: "Ibn Taymiyyah, on Arabic as part of the religion (ed. Nasir al-Aql, vol. 1)"),
-            ArticleSource(title: "Tafsir as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Taysir al-Karim ar-Rahman"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah, on Arabic as part of the religion (ed. Naasir al-Aql, vol. 1)"),
+            ArticleSource(title: "Tafseer as-Sadi", subtitle: "Abd ar-Rahman as-Sadi, Tayseer al-Kareem ar-Rahman"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
             ArticleSource(title: "The Quranic Arabic Corpus", subtitle: "The word, dictionary-word and root counts, checked against the app's Hafs text"),
             ArticleSource(title: "Will a person be rewarded for reading Quran even if he does not know the meaning of what he reads?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/4040"),
             ArticleSource(title: "Do You Get Reward for Listening to the Quran Without Understanding It?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/150633"),
             ArticleSource(title: "Is it waajib (obligatory) for non-Arabs to learn Arabic?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/6524"),
         ],
         "MuqattaatPillarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "Tafsir at-Tabari", subtitle: "Jami' al-Bayan fi Ta'wil al-Quran"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
-            ArticleSource(title: "The meaning of al-huroof al-muqatta'ah in the Qur'aan", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21811"),
-            ArticleSource(title: "There is no contradiction between the description of the Qur'an as being clear and explained in detail, and the appearance of the huroof muqatta'ah in it", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/242365"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "Tafseer at-Tabari", subtitle: "Jaami‘ al-Bayaan fi Ta’weel al-Quran"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti"),
+            ArticleSource(title: "The meaning of al-huroof al-muqatta‘ah in the Quran", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21811"),
+            ArticleSource(title: "There is no contradiction between the description of the Quran as being clear and explained in detail, and the appearance of the huroof muqatta‘ah in it", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/242365"),
         ],
         "JuzView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
-            ArticleSource(title: "Al-Burhan fi Ulum al-Quran", subtitle: "Az-Zarkashi"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "The division of the Qur'an into parts and portions", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/109885"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti"),
+            ArticleSource(title: "Al-Burhaan fi Uloom al-Quran", subtitle: "Az-Zarkashi"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "The division of the Quran into parts and portions", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/109885"),
             ArticleSource(title: "Do the thirty juz' of the Quran have special names?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/153745"),
         ],
         "AhrufView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "An-Nashr fil-Qira'at al-Ashr", subtitle: "Ibn al-Jazari"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf (vol. 13)"),
-            ArticleSource(title: "Al-Ibanah an Ma'ani al-Qira'at", subtitle: "Makki ibn Abi Talib"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "An-Nashr fil-Qiraa’aat al-Ashr", subtitle: "Ibn al-Jazari"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf (vol. 13)"),
+            ArticleSource(title: "Al-Ibaanah an Ma‘aani al-Qiraa’aat", subtitle: "Makki ibn Abi Taalib"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti"),
             ArticleSource(title: "The revelation of the Quran in seven styles (ahruf, sing. harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
-            ArticleSource(title: "'Uthmaan's compilation of the Mushaf in one style (harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125091"),
+            ArticleSource(title: "Uthmaan's compilation of the Mushaf in one style (harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125091"),
         ],
         "RiwayatDifferencesView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Hirz al-Amani wa Wajh at-Tahani (ash-Shatibiyyah)", subtitle: "Al-Qasim ibn Firruh ash-Shatibi, the principles of the seven readings"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Hirz al-Amaani wa Wajh at-Tahaani (ash-Shaatibiyyah)", subtitle: "Al-Qaasim ibn Firruh ash-Shaatibi, the principles of the seven readings"),
             ArticleSource(title: "Ad-Durrah al-Mudiyyah", subtitle: "Ibn al-Jazari, the three readings that complete the ten"),
-            ArticleSource(title: "An-Nashr fi al-Qira’at al-‘Ashr", subtitle: "Ibn al-Jazari, the ten readings and their narrators"),
-            ArticleSource(title: "Al-Muhkam fi Naqt al-Masahif", subtitle: "Abu ‘Amr ad-Dani, on the marks added to the mushaf"),
-            ArticleSource(title: "The printed mushafs of the twenty riwayat", subtitle: "The King Fahd Complex and Islamweb editions this app’s texts are taken from"),
+            ArticleSource(title: "An-Nashr fi al-Qiraa’aat al-Ashr", subtitle: "Ibn al-Jazari, the ten readings and their narrators"),
+            ArticleSource(title: "Al-Muhkam fi Naqt al-Masaahif", subtitle: "Abu Amr ad-Daani, on the marks added to the mushaf"),
+            ArticleSource(title: "The printed mushafs of the twenty riwaayaat", subtitle: "The King Fahd Complex and Islamweb editions this app’s texts are taken from"),
         ],
         "HadithSciencesView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "The Muqaddimah of Sahih Muslim", subtitle: "Imam Muslim on the isnad, with the sayings of Ibn Sirin and Ibn al-Mubarak"),
-            ArticleSource(title: "Muqaddimah Ibn as-Salah", subtitle: "Ibn as-Salah, ‘Ulum al-Hadith, with ash-Shafi‘i’s ar-Risalah on the conditions of a report"),
-            ArticleSource(title: "Nuzhat an-Nazar and Taqrib at-Tahdhib", subtitle: "Ibn Hajar al-‘Asqalani, on the terms of the science and the ranks of the narrators"),
-            ArticleSource(title: "Conditions of a saheeh (sound) hadeeth", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/79163"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Muqaddimah of Saheeh Muslim", subtitle: "Imam Muslim on the isnaad, with the sayings of Ibn Seereen and Ibn al-Mubaarak"),
+            ArticleSource(title: "Muqaddimah Ibn as-Salaah", subtitle: "Ibn as-Salaah, Uloom al-Hadith, with ash-Shaafi‘i’s ar-Risaalah on the conditions of a report"),
+            ArticleSource(title: "Nuzhat an-Nazar and Taqreeb at-Tahdheeb", subtitle: "Ibn Hajar al-Asqalaani, on the terms of the science and the ranks of the narrators"),
+            ArticleSource(title: "Conditions of a saheeh (sound) hadith", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/79163"),
             ArticleSource(title: "The science of hadith is based on reason and shar‘i guidelines", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/239540"),
         ],
         "HadithPreservationView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari and Hady as-Sari", subtitle: "Ibn Hajar al-‘Asqalani, on the writing of hadith and his count of Sahih al-Bukhari"),
-            ArticleSource(title: "Muqaddimah Ibn as-Salah", subtitle: "Ibn as-Salah, ‘Ulum al-Hadith, on the writing of hadith and the two Sahihs"),
-            ArticleSource(title: "Sahifah Hammam ibn Munabbih", subtitle: "Edited by Muhammad Hamidullah, with an introduction on the early compilation of hadith"),
-            ArticleSource(title: "The soundness of the hadeeth “Do not write anything from me…” and explanation of what it means", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22394"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari and Hady as-Sari", subtitle: "Ibn Hajar al-Asqalaani, on the writing of hadith and his count of Saheeh al-Bukhaari"),
+            ArticleSource(title: "Muqaddimah Ibn as-Salaah", subtitle: "Ibn as-Salaah, Uloom al-Hadith, on the writing of hadith and the two Saheehs"),
+            ArticleSource(title: "Saheefah Hammaam ibn Munabbih", subtitle: "Edited by Muhammad Hameedullah, with an introduction on the early compilation of hadith"),
+            ArticleSource(title: "The soundness of the hadith “Do not write anything from me…” and explanation of what it means", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22394"),
             ArticleSource(title: "What are the reasons why the hadiths were written down?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/488953"),
         ],
         "HadithRejectorsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ar-Risalah and Jima' al-'Ilm", subtitle: "Ash-Shafi'i, on the Sunnah as the Wisdom, and his debate with a man who rejected all reports"),
-            ArticleSource(title: "Al-Ihkam fi Usul al-Ahkam", subtitle: "Ibn Hazm, on the one who takes only what he finds in the Quran"),
-            ArticleSource(title: "Jami' Bayan al-'Ilm wa Fadlih", subtitle: "Ibn Abd al-Barr, the chapter on the place of the Sunnah beside the Book"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ar-Risaalah and Jimaa' al-Ilm", subtitle: "Ash-Shaafi‘i, on the Sunnah as the Wisdom, and his debate with a man who rejected all reports"),
+            ArticleSource(title: "Al-Ihkaam fi Usool al-Ahkaam", subtitle: "Ibn Hazm, on the one who takes only what he finds in the Quran"),
+            ArticleSource(title: "Jaami‘ Bayaan al-Ilm wa Fadlih", subtitle: "Ibn Abd al-Barr, the chapter on the place of the Sunnah beside the Book"),
             ArticleSource(title: "AHL Al-Quran Movement in Colonial Punjab: Exclusion of Hadith Literature", subtitle: "Saadia Sumbal, Journal of Social Sciences and Humanities 29:1 (2021)", url: "https://ojs.aiou.edu.pk/index.php/jssh/article/view/2202"),
             ArticleSource(title: "Refutation of those who quote the Holy Quran to reject the Sunnah and justify not acting upon it", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/256435"),
         ],
         "ProvingCaseView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the methodology and the note on intellectual honesty", url: "https://provingislam.net/"),
-            ArticleSource(title: "Nuzhat an-Nazar", subtitle: "Ibn Hajar al-Asqalani, on the mutawatir report and the certainty it gives"),
-            ArticleSource(title: "Al-Jawab as-Sahih li-man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah, his reply to a Christian treatise sent from Cyprus"),
+            ArticleSource(title: "Nuzhat an-Nazar", subtitle: "Ibn Hajar al-Asqalaani, on the mutawaatir report and the certainty it gives"),
+            ArticleSource(title: "Al-Jawaab as-Saheeh li-man Baddala Deen al-Maseeh", subtitle: "Ibn Taymiyyah, his reply to a Christian treatise sent from Cyprus"),
         ],
         "ProvingFingerprintView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the human fingerprint test", url: "https://provingislam.net/"),
-            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on 4:82 and 18:86"),
-            ArticleSource(title: "Ibn al-Nafis, the pulmonary circulation, and the Islamic Golden Age", subtitle: "John B. West, Journal of Applied Physiology, 2008", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2612469/"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on 4:82 and 18:86"),
+            ArticleSource(title: "Ibn an-Nafees, the pulmonary circulation, and the Islamic Golden Age", subtitle: "John B. West, Journal of Applied Physiology, 2008", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2612469/"),
             ArticleSource(title: "The Variation of Animals and Plants under Domestication", subtitle: "Charles Darwin, 1868, where he proposed pangenesis"),
             ArticleSource(title: "Dialogue Concerning the Two Chief World Systems", subtitle: "Galileo Galilei, 1632, whose fourth day sets out his theory of the tides"),
         ],
         "ProvingProphetView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "As-Silsilah as-Sahihah", subtitle: "Muhammad Nasir ad-Din al-Albani, no. 92: the report of ‘Aqil ibn Abi Talib, graded hasan"),
-            ArticleSource(title: "Al-Jami‘ li-Ahkam al-Quran", subtitle: "Al-Qurtubi, on what the Prophet concealed in Quran 33:37"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "As-Silsilah as-Saheehah", subtitle: "Muhammad Naasir ad-Deen al-Albaani, no. 92: the report of Aqeel ibn Abi Taalib, graded hasan"),
+            ArticleSource(title: "Al-Jaami‘ li-Ahkaam al-Quran", subtitle: "Al-Qurtubi, on what the Prophet concealed in Quran 33:37"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the Prophet’s character and the psychology of fraud", url: "https://provingislam.net/"),
-            ArticleSource(title: "Detailed discussion about the verse “But you did hide in yourself that which Allaah will make manifest” [al-Ahzaab 33:37]", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/96464"),
+            ArticleSource(title: "Detailed discussion about the verse “But you did hide in yourself that which Allah will make manifest” [al-Ahzaab 33:37]", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/96464"),
         ],
         "ProvingContinuationView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Majmu‘ al-Fatawa", subtitle: "Ibn Taymiyyah, vol. 18, on “I was a prophet while Adam was between spirit and body”"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, vol. 18, on “I was a prophet while Aadam was between spirit and body”"),
             ArticleSource(title: "The Holy Bible, King James Version", subtitle: "Deuteronomy 6:4 and Mark 12:29"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on prophetic continuation", url: "https://provingislam.net/"),
             ArticleSource(title: "Muhammad (peace and blessings of Allah be upon him) is the Seal of the Prophets and Messengers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/113393"),
         ],
         "ProvingStylometryView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "I'jaz al-Quran", subtitle: "Abu Bakr al-Baqillani, the chapter on the speech of the Prophet"),
-            ArticleSource(title: "The Chronology of the Qurʾān: A Stylometric Research Program", subtitle: "Behnam Sadeghi, Arabica 58 (2011), pages 210–299"),
-            ArticleSource(title: "Author discrimination between the Holy Quran and Prophet’s statements", subtitle: "Halim Sayoud, Literary and Linguistic Computing 27:4 (2012), pages 427–444", url: "https://academic.oup.com/dsh/article-abstract/27/4/427/941526"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "I‘jaaz al-Quran", subtitle: "Abu Bakr al-Baaqillaani, the chapter on the speech of the Prophet"),
+            ArticleSource(title: "The Chronology of the Quran: A Stylometric Research Program", subtitle: "Behnam Sadeghi, Arabica 58 (2011), pages 210–299"),
+            ArticleSource(title: "Author discrimination between the Holy Quran and Prophet’s statements", subtitle: "Haleem Sayoud, Literary and Linguistic Computing 27:4 (2012), pages 427–444", url: "https://academic.oup.com/dsh/article-abstract/27/4/427/941526"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on stylometry", url: "https://provingislam.net/"),
         ],
         "ProvingPreservationView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Jami' li-Ahkam al-Quran", subtitle: "Al-Qurtubi, on 15:9 and the scriptures entrusted to their guardians"),
-            ArticleSource(title: "Ṣanʿāʾ 1 and the Origins of the Qurʾān", subtitle: "Behnam Sadeghi and Mohsen Goudarzi, Der Islam 87 (2012), pages 1–129"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Jaami‘ li-Ahkaam al-Quran", subtitle: "Al-Qurtubi, on 15:9 and the scriptures entrusted to their guardians"),
+            ArticleSource(title: "San‘a 1 and the Origins of the Quran", subtitle: "Behnam Sadeghi and Mohsen Goudarzi, Der Islam 87 (2012), pages 1–129"),
             ArticleSource(title: "A Textual Commentary on the Greek New Testament", subtitle: "Bruce M. Metzger, on Mark 16:9–20, John 7:53–8:11 and 1 John 5:7–8"),
-            ArticleSource(title: "Birmingham Qur'an manuscript dated among the oldest in the world", subtitle: "University of Birmingham, 22 July 2015", url: "https://www.birmingham.ac.uk/news-archive/2015/birmingham-quran-manuscript-dated-among-the-oldest-in-the-world"),
+            ArticleSource(title: "Birmingham Quran manuscript dated among the oldest in the world", subtitle: "University of Birmingham, 22 July 2015", url: "https://www.birmingham.ac.uk/news-archive/2015/birmingham-quran-manuscript-dated-among-the-oldest-in-the-world"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on preservation", url: "https://provingislam.net/"),
         ],
         "ProvingIjazView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti, the chapter on the inimitability of the Quran"),
-            ArticleSource(title: "Al-Mustadrak 'ala as-Sahihayn", subtitle: "Al-Hakim, with adh-Dhahabi's Talkhis: the report of al-Walid ibn al-Mughirah"),
-            ArticleSource(title: "Al-Isti'ab fi Ma'rifat al-Ashab", subtitle: "Ibn 'Abd al-Barr, the entry on Labid ibn Rabi'ah"),
-            ArticleSource(title: "Miraculous aspects of the Holy Qur’an", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/245475"),
-            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the unmatched Qur'an", url: "https://provingislam.net/"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti, the chapter on the inimitability of the Quran"),
+            ArticleSource(title: "Al-Mustadrak 'ala as-Saheehayn", subtitle: "Al-Haakim, with adh-Dhahabi's Talkhees: the report of al-Waleed ibn al-Mugheerah"),
+            ArticleSource(title: "Al-Isti‘aab fi Ma‘rifat al-Ashaab", subtitle: "Ibn Abd al-Barr, the entry on Labeed ibn Rabee‘ah"),
+            ArticleSource(title: "Miraculous aspects of the Holy Quran", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/245475"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the unmatched Quran", url: "https://provingislam.net/"),
         ],
         "ProvingScienceView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari"),
-            ArticleSource(title: "Jami' al-Bayan and Tafsir al-Quran al-'Azim", subtitle: "al-Tabari and Ibn Kathir, for the classical range of meaning of each verse"),
-            ArticleSource(title: "Al-Muwafaqat", subtitle: "al-Shatibi, on the limits of reading the sciences into the Quran"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari"),
+            ArticleSource(title: "Jaami‘ al-Bayaan and Tafseer al-Quran al-Azeem", subtitle: "at-Tabari and Ibn Katheer, for the classical range of meaning of each verse"),
+            ArticleSource(title: "Al-Muwaafaqaat", subtitle: "ash-Shaatibi, on the limits of reading the sciences into the Quran"),
             ArticleSource(title: "History of Animals, Meteorology and Generation of Animals", subtitle: "Aristotle, the Greek science the Quran's age inherited, on bees, hail, metals and the embryo"),
             ArticleSource(title: "Development of Religion and Thought in Ancient Egypt", subtitle: "James Henry Breasted (1912), on the Pyramid Texts"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on scientific compatibility", url: "https://provingislam.net/"),
         ],
         "ProvingProphecyView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with Sunan Abi Dawud, Jami` at-Tirmidhi, Sunan an-Nasa'i and Sunan Ibn Majah"),
-            ArticleSource(title: "Sharh Sahih Muslim", subtitle: "al-Nawawi, on the hadith of the Turks and of the last Chosroes and Caesar"),
-            ArticleSource(title: "'Awn al-Ma'bud", subtitle: "The commentary on Sunan Abi Dawud, on the hadith of al-Basrah and the Tigris"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with Sunan Abi Daawood, Jaami‘ at-Tirmidhi, Sunan an-Nasaa’i and Sunan Ibn Maajah"),
+            ArticleSource(title: "Sharh Saheeh Muslim", subtitle: "an-Nawawi, on the hadith of the Turks and of the last Chosroes and Caesar"),
+            ArticleSource(title: "Awn al-Ma‘bood", subtitle: "The commentary on Sunan Abi Daawood, on the hadith of al-Basrah and the Tigris"),
             ArticleSource(title: "The History of the Decline and Fall of the Roman Empire", subtitle: "Edward Gibbon, chapter 46, on the Persian war of Heraclius"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on prophecy", url: "https://provingislam.net/"),
             ArticleSource(title: "Proofs of Islam", subtitle: "Proving Islam: prophecies and historical accuracies", url: "https://provingislam.com/proofs"),
         ],
         "ProvingSourcesView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "The Bible in Arabic", subtitle: "Sidney H. Griffith, Princeton University Press, 2013"),
-            ArticleSource(title: "Tafsir al-Quran al-'Azim", subtitle: "Ibn Kathir, on 6:105, 16:103 and 2:102"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, on the protection of the prophets (4/319-320)"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on 6:105, 16:103 and 2:102"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, on the protection of the prophets (4/319-320)"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on historical and scriptural knowledge", url: "https://provingislam.net/"),
-            ArticleSource(title: "Qur'anic Accuracy Vs. Biblical Error: The Kings & Pharaohs of Egypt", subtitle: "Islamic Awareness, citing Gardiner's Egyptian Grammar and Wilkinson's Dictionary of Ancient Egypt", url: "https://www.islamic-awareness.org/quran/contrad/external/josephdetail.html"),
+            ArticleSource(title: "Quranic Accuracy Vs. Biblical Error: The Kings & Pharaohs of Egypt", subtitle: "Islamic Awareness, citing Gardiner's Egyptian Grammar and Wilkinson's Dictionary of Ancient Egypt", url: "https://www.islamic-awareness.org/quran/contrad/external/josephdetail.html"),
         ],
         "ProvingBibleView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with al-Hakim’s Mustadrak"),
-            ArticleSource(title: "Al-Jawab as-Sahih li man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah, the chapters on the glad tidings of the earlier prophets and the Faraqlit"),
-            ArticleSource(title: "Hidayat al-Hayara fi Ajwibat al-Yahud wan-Nasara", subtitle: "Ibn al-Qayyim, with the debate on Deuteronomy 18 in the Maghrib"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with al-Haakim’s Mustadrak"),
+            ArticleSource(title: "Al-Jawaab as-Saheeh li man Baddala Deen al-Maseeh", subtitle: "Ibn Taymiyyah, the chapters on the glad tidings of the earlier prophets and the Faaraqleet"),
+            ArticleSource(title: "Hidaayat al-Hayaara fi Ajwibat al-Yahood wan-Nasaara", subtitle: "Ibn al-Qayyim, with the debate on Deuteronomy 18 in the Maghrib"),
             ArticleSource(title: "Izhar al-Haqq", subtitle: "Rahmatullah al-Kairanawi, the sixteenth glad tiding: the parable of the vineyard"),
             ArticleSource(title: "The Holy Bible, King James Version", subtitle: "Every Bible passage quoted; the Jewish readings from Rashi and the Aramaic Targum"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on Biblical prophecies", url: "https://provingislam.net/"),
         ],
         "ProvingScriptureView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari"),
-            ArticleSource(title: "Tafsir al-Quran al-‘Azim", subtitle: "Ibn Kathir, on 5:48, 2:63, 7:171 and 27:76, and his introduction on the reports of the People of the Book"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on 5:48, 2:63, 7:171 and 27:76, and his introduction on the reports of the People of the Book"),
             ArticleSource(title: "The Mishnah, the Talmud and the Midrash", subtitle: "Mishnah Sanhedrin 4:5; Babylonian Talmud, Shabbat 88a and Bava Metzia 86b; Genesis Rabbah 48:14; Pirkei de-Rabbi Eliezer 21; Midrash Tanhuma, Bereshit 10"),
             ArticleSource(title: "The Holy Bible, King James Version, and the Arabic Gospel of the Infancy", subtitle: "The Bible as quoted; the infancy gospel in the Ante-Nicene Fathers, volume 8"),
             ArticleSource(title: "The failure of a Jewish program of public satire in the squares of Medina", subtitle: "Reuven Firestone, in the journal Judaism (1997), on “we hear and we disobey”"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the Quran and prior scripture", url: "https://provingislam.net/"),
         ],
         "ProvingEthicsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Arba‘un an-Nawawiyyah", subtitle: "An-Nawawi, hadith 32 (no harm) and 33 (proof on the claimant), with his gradings"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Arba‘oon an-Nawawiyyah", subtitle: "An-Nawawi, hadith 32 (no harm) and 33 (proof on the claimant), with his gradings"),
             ArticleSource(title: "On Liberty", subtitle: "John Stuart Mill, 1859: the harm principle"),
             ArticleSource(title: "The “Constitution” of Medina: Translation, Commentary, and Meaning Today", subtitle: "Ovamir Anjum, Yaqeen Institute for Islamic Research, 2021"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on ethics and law", url: "https://provingislam.net/"),
-            ArticleSource(title: "Which Islamic or Qur'anic verse or quote is written on Harvard's main gate?", subtitle: "Harvard Library, Ask a Librarian: Quran 4:135 in the Words of Justice exhibit", url: "https://ask.library.harvard.edu/faq/82441"),
+            ArticleSource(title: "Which Islamic or Quranic verse or quote is written on Harvard's main gate?", subtitle: "Harvard Library, Ask a Librarian: Quran 4:135 in the Words of Justice exhibit", url: "https://ask.library.harvard.edu/faq/82441"),
         ],
         "ProvingJesusView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "The Holy Bible, King James Version", subtitle: "The Gospels, Acts and Hebrews, quoted in the standard text of the Authorized Version"),
-            ArticleSource(title: "Al-Jawab as-Sahih li man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah, on John 17:3 and John 20:17 among the Gospels’ own witness"),
+            ArticleSource(title: "Al-Jawaab as-Saheeh li man Baddala Deen al-Maseeh", subtitle: "Ibn Taymiyyah, on John 17:3 and John 20:17 among the Gospels’ own witness"),
             ArticleSource(title: "The Catholic Encyclopedia", subtitle: "“The Blessed Trinity” (1912), on Theophilus of Antioch and Tertullian"),
             ArticleSource(title: "Trinity: History of Trinitarian Doctrines", subtitle: "Stanford Encyclopedia of Philosophy", url: "https://plato.stanford.edu/entries/trinity/trinity-history.html"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on Jesus", url: "https://provingislam.net/"),
         ],
         "ProvingGodView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Dar' Ta'arud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, on why a regress of causes is impossible"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Daar' Ta‘aarud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, on why a regress of causes is impossible"),
             ArticleSource(title: "Just Six Numbers", subtitle: "Martin Rees (1999), the constants on which stars and life depend"),
             ArticleSource(title: "The Beginning of the Universe", subtitle: "Alexander Vilenkin, Inference: International Review of Science (2015), on the Borde-Guth-Vilenkin theorem"),
             ArticleSource(title: "Fine-Tuning", subtitle: "Stanford Encyclopedia of Philosophy", url: "https://plato.stanford.edu/entries/fine-tuning/"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on God’s existence", url: "https://provingislam.net/"),
         ],
         "ProvingQuestionsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the key questions", url: "https://provingislam.net/"),
             ArticleSource(title: "King or Pharaoh?", subtitle: "Mohammad Baqer, Proving Islam", url: "https://provingislam.com/proofs/kingorpharaoh"),
-            ArticleSource(title: "Author discrimination between the Holy Quran and Prophet’s statements", subtitle: "Halim Sayoud, Literary and Linguistic Computing 27:4, 2012"),
-            ArticleSource(title: "The Chronology of the Qur’an: A Stylometric Research Program", subtitle: "Behnam Sadeghi, Arabica 58, 2011"),
-            ArticleSource(title: "The Codex of a Companion of the Prophet and the Qur’an of the Prophet", subtitle: "Behnam Sadeghi and Uwe Bergmann, Arabica 57, 2010, on the Sana’a palimpsest"),
+            ArticleSource(title: "Author discrimination between the Holy Quran and Prophet’s statements", subtitle: "Haleem Sayoud, Literary and Linguistic Computing 27:4, 2012"),
+            ArticleSource(title: "The Chronology of the Quran: A Stylometric Research Program", subtitle: "Behnam Sadeghi, Arabica 58, 2011"),
+            ArticleSource(title: "The Codex of a Companion of the Prophet and the Quran of the Prophet", subtitle: "Behnam Sadeghi and Uwe Bergmann, Arabica 57, 2010, on the San‘a palimpsest"),
         ],
         "ProvingClosingView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
             ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the closing argument and its pillars", url: "https://provingislam.net/"),
             ArticleSource(title: "Proofs of Islam", subtitle: "Proving Islam, the proof articles on prophecy and history", url: "https://provingislam.com/proofs"),
-            ArticleSource(title: "Nuzhat an-Nazar", subtitle: "Ibn Hajar al-Asqalani, on the mutawatir report and the certainty it gives"),
+            ArticleSource(title: "Nuzhat an-Nazar", subtitle: "Ibn Hajar al-Asqalaani, on the mutawaatir report and the certainty it gives"),
         ],
         "QiraatView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "An-Nashr fil-Qira'at al-Ashr", subtitle: "Ibn al-Jazari"),
-            ArticleSource(title: "Al-Ibanah an Ma'ani al-Qira'at", subtitle: "Makki ibn Abi Talib"),
-            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "An-Nashr fil-Qiraa’aat al-Ashr", subtitle: "Ibn al-Jazari"),
+            ArticleSource(title: "Al-Ibaanah an Ma‘aani al-Qiraa’aat", subtitle: "Makki ibn Abi Taalib"),
+            ArticleSource(title: "Al-Itqaan fi Uloom al-Quran", subtitle: "As-Suyooti"),
             ArticleSource(title: "The revelation of the Quran in seven styles (ahruf, sing. harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
             ArticleSource(title: "Ruling on one who, whilst praying, switches between the seven modes of recitation that were narrated via mutawaatir reports", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/192182"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf and the readings (vol. 13)"),
-            ArticleSource(title: "Al-Majmu' Sharh al-Muhadhdhab", subtitle: "An-Nawawi, on reciting the shadh readings (3/392)"),
-            ArticleSource(title: "Ghayat an-Nihayah fi Tabaqat al-Qurra'", subtitle: "Ibn al-Jazari, the lives and teachers of the readers"),
-            ArticleSource(title: "Mizan al-I'tidal", subtitle: "Adh-Dhahabi, on Humran ibn A'yan"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, his answer on the seven ahruf and the readings (vol. 13)"),
+            ArticleSource(title: "Al-Majmoo‘ Sharh al-Muhadhdhab", subtitle: "An-Nawawi, on reciting the shaadh readings (3/392)"),
+            ArticleSource(title: "Ghaayat an-Nihaayah fi Tabaqaat al-Qurraa'", subtitle: "Ibn al-Jazari, the lives and teachers of the readers"),
+            ArticleSource(title: "Meezaan al-I‘tidaal", subtitle: "Adh-Dhahabi, on Humraan ibn A‘yan"),
         ],
         "HijriCalendarView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
             ArticleSource(title: "Why Is the Age of Islam Based on the Beginning of Hijrah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/176819"),
             ArticleSource(title: "The reason why the Hijri months are called by their well-known names", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/211395"),
         ],
         "SacredMonthsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim, on Quran 9:36-37"),
-            ArticleSource(title: "Tabyin al-Ajab bima Warada fi Fadl Rajab", subtitle: "Ibn Hajar al-Asqalani, on what is and is not established about Rajab"),
-            ArticleSource(title: "Lataif al-Maarif", subtitle: "Ibn Rajab al-Hanbali, on the seasons of the year and their acts of worship"),
-            ArticleSource(title: "Majmu al-Fatawa", subtitle: "Ibn Taymiyyah, on the sacred months and on innovated observances"),
-            ArticleSource(title: "The virtue of the month of Muharram and fasting on Ashura", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21776"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem, on Quran 9:36-37"),
+            ArticleSource(title: "Tabyeen al-Ajab bima Warada fi Fadl Rajab", subtitle: "Ibn Hajar al-Asqalaani, on what is and is not established about Rajab"),
+            ArticleSource(title: "Lataaif al-Ma‘aarif", subtitle: "Ibn Rajab al-Hanbali, on the seasons of the year and their acts of worship"),
+            ArticleSource(title: "Majmu al-Fataawa", subtitle: "Ibn Taymiyyah, on the sacred months and on innovated observances"),
+            ArticleSource(title: "The virtue of the month of Muharram and fasting on Aashoora", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21776"),
             ArticleSource(title: "Innovations in the month of Rajab", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/75394"),
         ],
         "MoonSightingView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, the book of fasting, on sighting the crescent"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, the book of fasting, on sighting the crescent"),
             ArticleSource(title: "Al-Majmu Sharh al-Muhadhdhab", subtitle: "An-Nawawi, on the sighting and on the differing places of moonrise"),
-            ArticleSource(title: "Fatawa Ibn Baz and the Permanent Committee for Scholarly Research and Ifta", subtitle: "On sighting versus calculation, and on one sighting for the ummah"),
-            ArticleSource(title: "Ash-Sharh al-Mumti", subtitle: "Ibn al-Uthaymin, on each land following its own sighting"),
+            ArticleSource(title: "Fataawa Ibn Baaz and the Permanent Committee for Scholarly Research and Ifta", subtitle: "On sighting versus calculation, and on one sighting for the ummah"),
+            ArticleSource(title: "Ash-Sharh al-Mumti", subtitle: "Ibn al-Uthaymeen, on each land following its own sighting"),
             ArticleSource(title: "Sighting the new moon of Ramadan and relying on astronomical calculations", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/1226"),
             ArticleSource(title: "Do the people of every land have their own sighting?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12666"),
         ],
         "SeerahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ar-Raheeq al-Makhtum (The Sealed Nectar)", subtitle: "Safi ar-Rahman al-Mubarakpuri"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ar-Raheeq al-Makhtoom (The Sealed Nectar)", subtitle: "Safi ar-Rahman al-Mubarakpuri"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
             ArticleSource(title: "Important books for the seeker of Islamic knowledge", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/14082"),
             ArticleSource(title: "Biography of the Prophet", subtitle: "IslamQA", url: "https://islamqa.info/en/categories/topics/263/biography-of-the-prophet"),
         ],
         "FarewellView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Ar-Raheeq al-Makhtum (The Sealed Nectar)", subtitle: "Safi ar-Rahman al-Mubarakpuri"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Ar-Raheeq al-Makhtoom (The Sealed Nectar)", subtitle: "Safi ar-Rahman al-Mubarakpuri"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari"),
             ArticleSource(title: "حجة الوداع", subtitle: "IslamQA", url: "https://islamqa.info/ar/answers/175128"),
-            ArticleSource(title: "مقتطفات من خطبة حجة الوداع", subtitle: "Ibn Baz", url: "https://binbaz.org.sa/videos/96/مقتطفات-من-خطبة-حجة-الوداع"),
+            ArticleSource(title: "مقتطفات من خطبة حجة الوداع", subtitle: "Ibn Baaz", url: "https://binbaz.org.sa/videos/96/مقتطفات-من-خطبة-حجة-الوداع"),
         ],
         "AhlulBaytView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Minhaj as-Sunnah an-Nabawiyyah", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Fada'il as-Sahabah", subtitle: "Ahmad ibn Hanbal"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Minhaaj as-Sunnah an-Nabawiyyah", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Fadaa’il as-Sahaabah", subtitle: "Ahmad ibn Hanbal"),
             ArticleSource(title: "Who Are Ahl al-Bayt?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10055"),
             ArticleSource(title: "Virtues of Ahl Al-Bayt", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/121948"),
         ],
         "WivesView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Isabah fi Tamyiz as-Sahabah", subtitle: "Ibn Hajar al-Asqalani"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Isaabah fi Tamyeez as-Sahaabah", subtitle: "Ibn Hajar al-Asqalaani"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
             ArticleSource(title: "Wives of Prophet Muhammad", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/47072"),
             ArticleSource(title: "The attitudes of the Messenger of Allah (blessings and peace of Allah be upon him) towards his wives and his good treatment of them", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/191429"),
         ],
         "SahabahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Isabah fi Tamyiz as-Sahabah", subtitle: "Ibn Hajar al-Asqalani"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Virtues of the Sahabah (Prophet's Companions)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/83121"),
-            ArticleSource(title: "The view of Ahl al-Sunnah towards the Sahaabah and the leadership of Abu Bakr al-Siddeeq", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13713"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Isaabah fi Tamyeez as-Sahaabah", subtitle: "Ibn Hajar al-Asqalaani"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Virtues of the Sahaabah (Prophet's Companions)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/83121"),
+            ArticleSource(title: "The view of Ahl as-Sunnah towards the Sahaabah and the leadership of Abu Bakr as-Siddeeq", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13713"),
         ],
         "CaliphatesView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
-            ArticleSource(title: "Tarikh al-Khulafa'", subtitle: "As-Suyuti"),
-            ArticleSource(title: "Minhaj as-Sunnah an-Nabawiyyah", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
+            ArticleSource(title: "Taareekh al-Khulafaa’", subtitle: "As-Suyooti"),
+            ArticleSource(title: "Minhaaj as-Sunnah an-Nabawiyyah", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "How the caliph of the Muslims is appointed", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/111836"),
-            ArticleSource(title: "The hadeeth \"There will appear among you twelve imams coming one after another, all of them from Quraysh.\"", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/146316"),
+            ArticleSource(title: "The hadith \"There will appear among you twelve imams coming one after another, all of them from Quraysh.\"", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/146316"),
         ],
         "MadhabView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "I'lam al-Muwaqqi'in", subtitle: "Ibn al-Qayyim, on following evidence over men"),
-            ArticleSource(title: "Raf' al-Malam an al-A'immah al-A'lam", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Jami' Bayan al-Ilm wa Fadlih", subtitle: "Ibn Abd al-Barr"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "I‘laam al-Muwaqqi‘een", subtitle: "Ibn al-Qayyim, on following evidence over men"),
+            ArticleSource(title: "Raf' al-Malaam an al-A’immah al-A‘laam", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Jaami‘ Bayaan al-Ilm wa Fadlih", subtitle: "Ibn Abd al-Barr"),
             ArticleSource(title: "Do You Have to Follow a Madhhab?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21420"),
             ArticleSource(title: "Why are there differences of opinion among the imams concerning fiqhi matters? Is it essential to follow one of the madhhabs?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/128658"),
         ],
         "AqeedahMadhabView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Sharh Usul I'tiqad Ahl as-Sunnah", subtitle: "Al-Lalaka'i, the creed of the Salaf with chains"),
-            ArticleSource(title: "Al-Ibanah an Usul ad-Diyanah", subtitle: "Abu al-Hasan al-Ash'ari, his final creed"),
-            ArticleSource(title: "Khalq Af'al al-'Ibad", subtitle: "Al-Bukhari, against the Jahmiyyah"),
-            ArticleSource(title: "Minhaj as-Sunnah an-Nabawiyyah and at-Tis'iniyyah", subtitle: "Ibn Taymiyyah, on the two senses of Ahl as-Sunnah and the degrees of the Jahmiyyah"),
-            ArticleSource(title: "Shifa' al-'Alil", subtitle: "Ibn al-Qayyim, the four levels of the decree"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Sharh Usool I‘tiqaad Ahl as-Sunnah", subtitle: "Al-Laalakaa’i, the creed of the Salaf with chains"),
+            ArticleSource(title: "Al-Ibaanah an Usool ad-Diyaanah", subtitle: "Abu al-Hasan al-Ash'ari, his final creed"),
+            ArticleSource(title: "Khalq Af‘aal al-Ibaad", subtitle: "Al-Bukhaari, against the Jahmiyyah"),
+            ArticleSource(title: "Minhaaj as-Sunnah an-Nabawiyyah and at-Tis‘eeniyyah", subtitle: "Ibn Taymiyyah, on the two senses of Ahl as-Sunnah and the degrees of the Jahmiyyah"),
+            ArticleSource(title: "Shifaa’ al-Aleel", subtitle: "Ibn al-Qayyim, the four levels of the decree"),
             ArticleSource(title: "Who are the Ash'aris? Are they among Ahl as-Sunnah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/226290"),
-            ArticleSource(title: "Differences between Maturidis and Ahl as-Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/205836"),
+            ArticleSource(title: "Differences between Maatureedees and Ahl as-Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/205836"),
         ],
         "AhlusSunnahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Usul as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
-            ArticleSource(title: "Sharh as-Sunnah", subtitle: "Al-Barbahari"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Who are Ahl al-Sunnah wa'l-Jamaa'ah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10777"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Usool as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
+            ArticleSource(title: "Sharh as-Sunnah", subtitle: "Al-Barbahaari"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Who are Ahl as-Sunnah wa'l-Jamaa'ah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10777"),
             ArticleSource(title: "Which Group Is the Saved One?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/90112"),
         ],
         "FiqhAqeedahManhajView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the three fundamental principles"),
-            ArticleSource(title: "Lum'at al-I'tiqad", subtitle: "Ibn Qudamah al-Maqdisi, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "I'lam al-Muwaqqi'in", subtitle: "Ibn al-Qayyim, on following evidence over men"),
-            ArticleSource(title: "What Is 'Aqeedah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/951"),
-            ArticleSource(title: "Difference between Shari'ah, Fiqh and Usul Al-Fiqh", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/282538"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the three fundamental principles"),
+            ArticleSource(title: "Lum‘at al-I‘tiqaad", subtitle: "Ibn Qudaamah al-Maqdisi, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "I‘laam al-Muwaqqi‘een", subtitle: "Ibn al-Qayyim, on following evidence over men"),
+            ArticleSource(title: "What Is Aqeedah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/951"),
+            ArticleSource(title: "Difference between Sharee‘ah, Fiqh and Usool Al-Fiqh", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/282538"),
         ],
         "SahabahScholarsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Isabah fi Tamyiz as-Sahabah", subtitle: "Ibn Hajar al-Asqalani"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Who Is `Abdullah ibn `Abbas?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/330016"),
-            ArticleSource(title: "The Rightly-Guided Caliphs (may Allah be pleased with them) were more knowledgeable and more virtuous than the rest of the Sahabah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/211865"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Isaabah fi Tamyeez as-Sahaabah", subtitle: "Ibn Hajar al-Asqalaani"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Who Is Abdullah ibn Abbaas?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/330016"),
+            ArticleSource(title: "The Rightly-Guided Caliphs (may Allah be pleased with them) were more knowledgeable and more virtuous than the rest of the Sahaabah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/211865"),
         ],
         "SalafScholarsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Al-Intiqa' fi Fada'il ath-Thalathah al-A'immah al-Fuqaha'", subtitle: "Ibn Abd al-Barr"),
-            ArticleSource(title: "Usul as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Al-Intiqaa' fi Fadaa’il ath-Thalaathah al-A’immah al-Fuqahaa’", subtitle: "Ibn Abd al-Barr"),
+            ArticleSource(title: "Usool as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
             ArticleSource(title: "Brief overview of the madhhab of Imam Abu Haneefah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/46992"),
             ArticleSource(title: "A brief biography of Imam Ahmad", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/153333"),
         ],
         "TabariView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir at-Tabari", subtitle: "Jami' al-Bayan fi Ta'wil al-Quran"),
-            ArticleSource(title: "Tarikh ar-Rusul wal-Muluk", subtitle: "At-Tabari"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Which is more sound, Tafseer Ibn Katheer or Tafseer al-Tabari?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/43778"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer at-Tabari", subtitle: "Jaami‘ al-Bayaan fi Ta’weel al-Quran"),
+            ArticleSource(title: "Taareekh ar-Rusul wal-Mulook", subtitle: "At-Tabari"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Which is more sound, Tafseer Ibn Katheer or Tafseer at-Tabari?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/43778"),
         ],
         "IbnTaymiyyahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Al-A'lam al-Aliyyah fi Manaqib Ibn Taymiyyah", subtitle: "Al-Bazzar"),
-            ArticleSource(title: "The 'aqeedah of Shaykh al-Islam Ibn Taymiyah and the praise of the imams for him and Ibn Hajar's attitude towards him", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/96323"),
-            ArticleSource(title: "Effect of Shaykh al-Islam Ibn Taymiyah on the da'wah of Shaykh Muhammad ibn 'Abd al-Wahhaab", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/89671"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Al-A‘laam al-Aliyyah fi Manaaqib Ibn Taymiyyah", subtitle: "Al-Bazzaar"),
+            ArticleSource(title: "The ‘aqeedah of Shaykh al-Islam Ibn Taymiyyah and the praise of the imams for him and Ibn Hajar's attitude towards him", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/96323"),
+            ArticleSource(title: "Effect of Shaykh al-Islam Ibn Taymiyyah on the dawah of Shaykh Muhammad ibn Abd al-Wahhaab", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/89671"),
         ],
         "IbnQayyimView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Madarij as-Salikin", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "I'lam al-Muwaqqi'in", subtitle: "Ibn al-Qayyim, on following evidence over men"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Madaarij as-Saalikeen", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "I‘laam al-Muwaqqi‘een", subtitle: "Ibn al-Qayyim, on following evidence over men"),
             ArticleSource(title: "ترجمة ابن القيم وابن الجوزي ، ومعنى \"نفعنا الله ببركتهم\" في كلام العلماء", subtitle: "IslamQA", url: "https://islamqa.info/ar/answers/127762"),
-            ArticleSource(title: "Specious arguments of the Ash'aris about Ibn al-Qayyim and Ibn Abi'l-'Izz (may Allah have mercy on them)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/235416"),
+            ArticleSource(title: "Specious arguments of the Ash'aris about Ibn al-Qayyim and Ibn Abil-Izz (may Allah have mercy on them)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/235416"),
         ],
         "DhahabiView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Al-Uluw lil-Aliyy al-Ghaffar", subtitle: "Adh-Dhahabi"),
-            ArticleSource(title: "Tadhkirat al-Huffaz", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Al-Uluw lil-Aliyy al-Ghaffaar", subtitle: "Adh-Dhahabi"),
+            ArticleSource(title: "Tadhkirat al-Huffaaz", subtitle: "Adh-Dhahabi"),
             ArticleSource(title: "Biography of Imam adh-Dhahabi", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/229097"),
         ],
         "IbnKathirView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim"),
-            ArticleSource(title: "Al-Bidayah wan-Nihayah", subtitle: "Ibn Kathir"),
-            ArticleSource(title: "Al-Ba'ith al-Hathith", subtitle: "Ibn Kathir, on hadith sciences"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem"),
+            ArticleSource(title: "Al-Bidaayah wan-Nihaayah", subtitle: "Ibn Katheer"),
+            ArticleSource(title: "Al-Baa‘ith al-Hatheeth", subtitle: "Ibn Katheer, on hadith sciences"),
             ArticleSource(title: "ترجمة موجزة للحافظ ابن كثير", subtitle: "IslamQA", url: "https://islamqa.info/ar/answers/110699"),
-            ArticleSource(title: "التعريف بكتاب البداية والنهاية وكتب يُنصح باقتنائها", subtitle: "Ibn Baz", url: "https://binbaz.org.sa/fatwas/12339/التعريف-بكتاب-البداية-والنهاية-وكتب-ينصح-باقتنائها"),
+            ArticleSource(title: "التعريف بكتاب البداية والنهاية وكتب يُنصح باقتنائها", subtitle: "Ibn Baaz", url: "https://binbaz.org.sa/fatwas/12339/التعريف-بكتاب-البداية-والنهاية-وكتب-ينصح-باقتنائها"),
         ],
         "LaterScholarsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Majmu' Fatawa wa Maqalat", subtitle: "Ibn Baz"),
-            ArticleSource(title: "Majmu' Fatawa wa Rasa'il", subtitle: "Ibn al-Uthaymin"),
-            ArticleSource(title: "Silsilat al-Ahadith as-Sahihah", subtitle: "Al-Albani"),
-            ArticleSource(title: "Shaykh al-Albaani (may Allaah have mercy on him) was a great muhaddith and a mujtahid faqeeh", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/113687"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Majmoo‘ Fataawa wa Maqaalaat", subtitle: "Ibn Baaz"),
+            ArticleSource(title: "Majmoo‘ Fataawa wa Rasaa’il", subtitle: "Ibn al-Uthaymeen"),
+            ArticleSource(title: "Silsilat al-Ahaadeeth as-Saheehah", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Shaykh al-Albaani (may Allah have mercy on him) was a great muhaddith and a mujtahid faqeeh", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/113687"),
             ArticleSource(title: "Advice to those who do not recognize the Salafi scholars and call them Wahhaabis", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12203"),
         ],
         "TawhidView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the three fundamental principles"),
-            ArticleSource(title: "Kashf ash-Shubuhat", subtitle: "Muhammad ibn Abd al-Wahhab"),
-            ArticleSource(title: "What Is the Meaning of Tawhid?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49030"),
-            ArticleSource(title: "What Are the Conditions of La Ilaha Illa-Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12295"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the three fundamental principles"),
+            ArticleSource(title: "Kashf ash-Shubuhaat", subtitle: "Muhammad ibn Abd al-Wahhaab"),
+            ArticleSource(title: "What Is the Meaning of Tawheed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49030"),
+            ArticleSource(title: "What Are the Conditions of La Ilaaha Illa-Allah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12295"),
         ],
         "SalafiyyahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Usul as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
-            ArticleSource(title: "Sharh as-Sunnah", subtitle: "Al-Barbahari"),
-            ArticleSource(title: "Ad-Durar as-Saniyyah", subtitle: "The letters and creed of Muhammad ibn Abd al-Wahhab and the scholars of Najd"),
-            ArticleSource(title: "Al-Ansab", subtitle: "As-Sam'ani, the entry on the ascription “as-Salafi”"),
-            ArticleSource(title: "Siyar A'lam an-Nubala'", subtitle: "Adh-Dhahabi, the imams he called Salafi"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Usool as-Sunnah", subtitle: "Ahmad ibn Hanbal, the creed of the Salaf in his own words"),
+            ArticleSource(title: "Sharh as-Sunnah", subtitle: "Al-Barbahaari"),
+            ArticleSource(title: "Ad-Durar as-Saniyyah", subtitle: "The letters and creed of Muhammad ibn Abd al-Wahhaab and the scholars of Najd"),
+            ArticleSource(title: "Al-Ansaab", subtitle: "As-Sam‘aani, the entry on the ascription “as-Salafi”"),
+            ArticleSource(title: "Siyar A‘laam an-Nubalaa'", subtitle: "Adh-Dhahabi, the imams he called Salafi"),
             ArticleSource(title: "Who are the Wahhaabis and what is their message?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10867"),
-            ArticleSource(title: "Muhammad ibn 'Abd al-Wahhaab – a reformer concerning whom many malicious lies have been told", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36616"),
+            ArticleSource(title: "Muhammad ibn Abd al-Wahhaab – a reformer concerning whom many malicious lies have been told", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36616"),
         ],
         "QuranSunnahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Miftah al-Jannah fil-Ihtijaj bis-Sunnah", subtitle: "As-Suyuti, on the authority of the Sunnah"),
-            ArticleSource(title: "I'lam al-Muwaqqi'in", subtitle: "Ibn al-Qayyim, on following evidence over men"),
-            ArticleSource(title: "Raf' al-Malam an al-A'immah al-A'lam", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Miftaah al-Jannah fil-Ihtijaaj bis-Sunnah", subtitle: "As-Suyooti, on the authority of the Sunnah"),
+            ArticleSource(title: "I‘laam al-Muwaqqi‘een", subtitle: "Ibn al-Qayyim, on following evidence over men"),
+            ArticleSource(title: "Raf' al-Malaam an al-A’immah al-A‘laam", subtitle: "Ibn Taymiyyah"),
             ArticleSource(title: "Justification for following the Sunnah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/604"),
-            ArticleSource(title: "The misguided sect of al-Qur'aaniyyeen", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/3440"),
+            ArticleSource(title: "The misguided sect of al-Quraaniyyeen", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/3440"),
         ],
         "ShirkView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Kashf ash-Shubuhat", subtitle: "Muhammad ibn Abd al-Wahhab"),
-            ArticleSource(title: "Ighathat al-Lahfan", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Kashf ash-Shubuhaat", subtitle: "Muhammad ibn Abd al-Wahhaab"),
+            ArticleSource(title: "Ighaathat al-Lahfaan", subtitle: "Ibn al-Qayyim"),
             ArticleSource(title: "What Is Shirk and its types?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34817"),
             ArticleSource(title: "Minor shirk", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/91763"),
         ],
         "KufrView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Nawaqid al-Islam", subtitle: "Muhammad ibn Abd al-Wahhab, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Majmu' al-Fatawa, volumes 3 and 12", subtitle: "Ibn Taymiyyah, on takfir and its conditions"),
-            ArticleSource(title: "Madarij as-Salikin", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Is there scholarly consensus on all ten things which nullify Islam that were mentioned by Imam Muhammad ibn 'Abd al-Wahhaab?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/227935"),
-            ArticleSource(title: "What Is Takfir?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/85102"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Nawaaqid al-Islam", subtitle: "Muhammad ibn Abd al-Wahhaab, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa, volumes 3 and 12", subtitle: "Ibn Taymiyyah, on takfeer and its conditions"),
+            ArticleSource(title: "Madaarij as-Saalikeen", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Is there scholarly consensus on all ten things which nullify Islam that were mentioned by Imam Muhammad ibn Abd al-Wahhaab?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/227935"),
+            ArticleSource(title: "What Is Takfeer?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/85102"),
         ],
         "BidahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-I'tisam", subtitle: "Ash-Shatibi, on innovation"),
-            ArticleSource(title: "Iqtida' as-Sirat al-Mustaqim", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Al-Ibanah al-Kubra", subtitle: "Ibn Battah"),
-            ArticleSource(title: "Bid'ah Hasanah (\"Good Innovations\")", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/864"),
-            ArticleSource(title: "What Is the Meaning of Bid'ah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7277"),
-            ArticleSource(title: "Jami' al-Ulum wal-Hikam", subtitle: "Ibn Rajab, on hadith 28, \"every innovation is misguidance\""),
-            ArticleSource(title: "The Notion of Bid'ah Hasanah: the Statements of Imam ash-Shafi'i", subtitle: "Bidah.com, part 3 of the series", url: "https://www.bidah.com/articles/rouuz-the-notion-of-bidah-hasanah-good-innovation-in-worship-destroyed-part-3.cfm"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, the definition of bid'ah in belief and worship (vol. 18)"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-I‘tisaam", subtitle: "Ash-Shaatibi, on innovation"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Al-Ibaanah al-Kubra", subtitle: "Ibn Battah"),
+            ArticleSource(title: "Bid‘ah Hasanah (\"Good Innovations\")", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/864"),
+            ArticleSource(title: "What Is the Meaning of Bid‘ah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7277"),
+            ArticleSource(title: "Jaami‘ al-Uloom wal-Hikam", subtitle: "Ibn Rajab, on hadith 28, \"every innovation is misguidance\""),
+            ArticleSource(title: "The Notion of Bid‘ah Hasanah: the Statements of Imam ash-Shaafi‘i", subtitle: "Bidah.com, part 3 of the series", url: "https://www.bidah.com/articles/rouuz-the-notion-of-bidah-hasanah-good-innovation-in-worship-destroyed-part-3.cfm"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, the definition of bid‘ah in belief and worship (vol. 18)"),
             ArticleSource(title: "Which Group Is the Saved One?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/90112"),
         ],
         "QiraatContradictView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "An-Nashr fi al-Qira'at al-'Ashr", subtitle: "Ibn al-Jazari, on the three kinds of difference between the readings"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, the fatwa on the seven ahruf (vol. 13)"),
-            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim, on al-Ma'idah 5:6"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "An-Nashr fi al-Qiraa’aat al-Ashr", subtitle: "Ibn al-Jazari, on the three kinds of difference between the readings"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, the fatwa on the seven ahruf (vol. 13)"),
+            ArticleSource(title: "Tafseer Ibn Katheer", subtitle: "Tafseer al-Quran al-Azeem, on al-Maa’idah 5:6"),
             ArticleSource(title: "The revelation of the Quran in seven styles (ahruf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
             ArticleSource(title: "The seven modes of recitation are mutawaatir", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/178120"),
         ],
         "AwrahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, the chapter on dress in prayer (vol. 22)"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, on the conditions of prayer"),
-            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Permanent Committee, fatwas 5128 and 21302"),
-            ArticleSource(title: "Risalat al-Hijab and Jilbab al-Mar'ah al-Muslimah", subtitle: "Ibn al-Uthaymin and al-Albani, the two views on the face"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, the chapter on dress in prayer (vol. 22)"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, on the conditions of prayer"),
+            ArticleSource(title: "Fataawa al-Lajnah ad-Daa’imah", subtitle: "The Permanent Committee, fatwas 5128 and 21302"),
+            ArticleSource(title: "Risaalat al-Hijab and Jilbaab al-Mar’ah al-Muslimah", subtitle: "Ibn al-Uthaymeen and al-Albaani, the two views on the face"),
             ArticleSource(title: "Evidence that Men's Awrah Is from the Navel to the Knee", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34976"),
             ArticleSource(title: "What is a woman permitted to uncover in front of other women and mahrams?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34745"),
         ],
         "MawlidView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Iqtida' as-Sirat al-Mustaqim", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Al-Mawrid fi Amal al-Mawlid", subtitle: "Al-Fakihani"),
-            ArticleSource(title: "Majmu' Fatawa wa Maqalat", subtitle: "Ibn Baz"),
-            ArticleSource(title: "Celebrating Mawlid al-Nabi (Muhammad's Birthday): Allowed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/249"),
-            ArticleSource(title: "Ruling on celebrating the birthday of the Messenger (blessings and peace of Allah be upon him) without any singing or other haram things", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/148053"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Iqtidaa' as-Siraat al-Mustaqeem", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Al-Mawrid fi Amal al-Mawlid", subtitle: "Al-Faakihaani"),
+            ArticleSource(title: "Majmoo‘ Fataawa wa Maqaalaat", subtitle: "Ibn Baaz"),
+            ArticleSource(title: "Celebrating Mawlid an-Nabi (Muhammad's Birthday): Allowed?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/249"),
+            ArticleSource(title: "Ruling on celebrating the birthday of the Messenger (blessings and peace of Allah be upon him) without any singing or other haraam things", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/148053"),
         ],
         "EvilEyeView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Tafsir al-Quran al-'Azim", subtitle: "Ibn Kathir, on al-Qalam 68:51 and Yusuf 12:67"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, the Book of Medicine: ruqyah for the eye and “the eye is real”"),
-            ArticleSource(title: "Sharh Sahih Muslim", subtitle: "An-Nawawi, on the hadiths of the eye, the decree, and envy"),
-            ArticleSource(title: "Zad al-Ma'ad and Bada'i' al-Fawa'id", subtitle: "Ibn al-Qayyim, on the eye, the envier, and their cure"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, on envy and its kinds"),
-            ArticleSource(title: "Kitab at-Tawhid and al-Qawl al-Mufid", subtitle: "Muhammad ibn Abd al-Wahhab, the chapter on ruqyah and amulets, with Ibn al-Uthaymin's commentary on amulets, causes, and omens"),
-            ArticleSource(title: "Majmu' Fatawa Ibn Baz and Majmu' Fatawa Ibn al-Uthaymin", subtitle: "On amulets made of Quran, what to say on admiring, and precaution against the eye"),
-            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volume 1: the eye, amulets, and fumigation"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafseer al-Quran al-Azeem", subtitle: "Ibn Katheer, on al-Qalam 68:51 and Yoosuf 12:67"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, the Book of Medicine: ruqyah for the eye and “the eye is real”"),
+            ArticleSource(title: "Sharh Saheeh Muslim", subtitle: "An-Nawawi, on the hadiths of the eye, the decree, and envy"),
+            ArticleSource(title: "Zad al-Ma‘aad and Badaa’i‘ al-Fawaa’id", subtitle: "Ibn al-Qayyim, on the eye, the envier, and their cure"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, on envy and its kinds"),
+            ArticleSource(title: "Kitaab at-Tawheed and al-Qawl al-Mufeed", subtitle: "Muhammad ibn Abd al-Wahhaab, the chapter on ruqyah and amulets, with Ibn al-Uthaymeen's commentary on amulets, causes, and omens"),
+            ArticleSource(title: "Majmoo‘ Fataawa Ibn Baaz and Majmoo‘ Fataawa Ibn al-Uthaymeen", subtitle: "On amulets made of Quran, what to say on admiring, and precaution against the eye"),
+            ArticleSource(title: "Fataawa al-Lajnah ad-Daa’imah", subtitle: "The Standing Committee, volume 1: the eye, amulets, and fumigation"),
             ArticleSource(title: "Protection from the Evil Eye: How?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20954"),
             ArticleSource(title: "Can a man harm his beautiful wife with the “evil eye”?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7190"),
             ArticleSource(title: "Types of amulets and superstition that some Muslims fall into", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/126359"),
@@ -3652,372 +3958,372 @@ enum ArticleSources {
             ArticleSource(title: "Waswas (Satanic Whispers) About the Evil Eye", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/89604"),
         ],
         "SufismAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Furqan bayna Awliya' ar-Rahman wa Awliya' ash-Shaytan", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Madarij as-Salikin", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Majmu' al-Fatawa, volumes 10 and 11", subtitle: "Ibn Taymiyyah, on tasawwuf"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Furqaan bayna Awliyaa’ ar-Rahman wa Awliyaa’ ash-Shaytaan", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Madaarij as-Saalikeen", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa, volumes 10 and 11", subtitle: "Ibn Taymiyyah, on tasawwuf"),
             ArticleSource(title: "Sufi tareeqahs and the ruling on joining them", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20375"),
             ArticleSource(title: "What Is Sufism?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/47431"),
         ],
         "ShiaAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Minhaj as-Sunnah an-Nabawiyyah", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
-            ArticleSource(title: "Al-Muntaqa min Minhaj al-I'tidal", subtitle: "Adh-Dhahabi's abridgement of Minhaj as-Sunnah"),
-            ArticleSource(title: "Information about the Shi'ah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/97448"),
-            ArticleSource(title: "The status of the imams of the Ithna 'Ashari Shi'ah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/101272"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Minhaaj as-Sunnah an-Nabawiyyah", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Al-Aqeedah al-Waasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymeen"),
+            ArticleSource(title: "Al-Muntaqa min Minhaaj al-I‘tidaal", subtitle: "Adh-Dhahabi's abridgement of Minhaaj as-Sunnah"),
+            ArticleSource(title: "Information about the Shia", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/97448"),
+            ArticleSource(title: "The status of the imams of the Ithna Ashari Shia", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/101272"),
         ],
         "ChristianityAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Jawab as-Sahih li man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Hidayat al-Hayara", subtitle: "Ibn al-Qayyim, answering the Jews and Christians"),
-            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwa' wan-Nihal", subtitle: "Ibn Hazm"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Jawaab as-Saheeh li man Baddala Deen al-Maseeh", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Hidaayat al-Hayaara", subtitle: "Ibn al-Qayyim, answering the Jews and Christians"),
+            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwaa' wan-Nihal", subtitle: "Ibn Hazm"),
             ArticleSource(title: "What is the concept of the Christian Trinity that the Quran declares to be false?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/243142"),
             ArticleSource(title: "The crucifixion of the Messiah between Islam and Christianity", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/224199"),
         ],
         "JudaismAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Jawab as-Sahih li man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah"),
-            ArticleSource(title: "Hidayat al-Hayara", subtitle: "Ibn al-Qayyim, answering the Jews and Christians"),
-            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwa' wan-Nihal", subtitle: "Ibn Hazm"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Jawaab as-Saheeh li man Baddala Deen al-Maseeh", subtitle: "Ibn Taymiyyah"),
+            ArticleSource(title: "Hidaayat al-Hayaara", subtitle: "Ibn al-Qayyim, answering the Jews and Christians"),
+            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwaa' wan-Nihal", subtitle: "Ibn Hazm"),
             ArticleSource(title: "Question about the distortion to which the Torah was subjected", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/305743"),
-            ArticleSource(title: "The misguidance of the Jews with regard to 'aqeedah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/9905"),
+            ArticleSource(title: "The misguidance of the Jews with regard to ‘aqeedah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/9905"),
         ],
         "HinduismAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Ighathat al-Lahfan", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwa' wan-Nihal", subtitle: "Ibn Hazm"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Ighaathat al-Lahfaan", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwaa' wan-Nihal", subtitle: "Ibn Hazm"),
             ArticleSource(title: "A brief look at Hinduism", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/126472"),
             ArticleSource(title: "Reincarnation in Islam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/14379"),
         ],
         "PaganismAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Ighathat al-Lahfan", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwa' wan-Nihal", subtitle: "Ibn Hazm"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Ighaathat al-Lahfaan", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwaa' wan-Nihal", subtitle: "Ibn Hazm"),
             ArticleSource(title: "What is meant by al-wathaniyyah (idolatry)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/307198"),
             ArticleSource(title: "Witchcraft and Seeking Help From Practitioners of it", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12578"),
         ],
         "BuddhismAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Ighathat al-Lahfan", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwa' wan-Nihal", subtitle: "Ibn Hazm"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Ighaathat al-Lahfaan", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Al-Fisal fil-Milal wal-Ahwaa' wan-Nihal", subtitle: "Ibn Hazm"),
             ArticleSource(title: "Buddha was a kaafir philosopher not a Prophet", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/106416"),
             ArticleSource(title: "Categories of religion", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21525"),
         ],
         "AtheismAnswerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Miftah Dar as-Sa'adah", subtitle: "Ibn al-Qayyim, on knowledge, design, and the proofs of the Creator"),
-            ArticleSource(title: "Dar' Ta'arud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, revelation and reason do not conflict"),
-            ArticleSource(title: "Kashf ash-Shubuhat", subtitle: "Muhammad ibn Abd al-Wahhab"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Miftaah Daar as-Sa‘aadah", subtitle: "Ibn al-Qayyim, on knowledge, design, and the proofs of the Creator"),
+            ArticleSource(title: "Daar' Ta‘aarud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, revelation and reason do not conflict"),
+            ArticleSource(title: "Kashf ash-Shubuhaat", subtitle: "Muhammad ibn Abd al-Wahhaab"),
             ArticleSource(title: "Existence of God: Any Evidence?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/26745"),
             ArticleSource(title: "Falseness of the theory of evolution", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/34508"),
         ],
         "HowToPrayView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Sifat Salat an-Nabi", subtitle: "Al-Albani, the Prophet's prayer described from the sahih hadith"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Sifaat Salaat an-Nabi", subtitle: "Al-Albaani, the Prophet's prayer described from the saheeh hadith"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
             ArticleSource(title: "Description of the Prophet's Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13340"),
             ArticleSource(title: "Obligatory Parts and Sunnah Acts of Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/65847"),
         ],
         "HowToFastView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
             ArticleSource(title: "What Breaks Your Fast", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/38023"),
             ArticleSource(title: "Matters that Break the Fast", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22981"),
         ],
         "HowToZakahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "How to Calculate Zakah on Gold", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/214221"),
-            ArticleSource(title: "Evidence That the Rate of Zakah is 2.5%", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/145600"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "How to Calculate Zakaah on Gold", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/214221"),
+            ArticleSource(title: "Evidence That the Rate of Zakaah is 2.5%", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/145600"),
         ],
         "HowToHajjView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "At-Tahqiq wal-Idah", subtitle: "Ibn Baz, on Hajj and Umrah"),
-            ArticleSource(title: "Manasik al-Hajj wal-Umrah", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "At-Tahqeeq wal-Eedaah", subtitle: "Ibn Baaz, on Hajj and Umrah"),
+            ArticleSource(title: "Manaasik al-Hajj wal-Umrah", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
             ArticleSource(title: "Description of Hajj", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/31822"),
             ArticleSource(title: "How to Perform Hajj", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/27090"),
         ],
         "HowToUmrahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "At-Tahqiq wal-Idah", subtitle: "Ibn Baz, on Hajj and Umrah"),
-            ArticleSource(title: "Manasik al-Hajj wal-Umrah", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "How to Perform 'Umrah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/154979"),
-            ArticleSource(title: "What Is 'Umrah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/31819"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "At-Tahqeeq wal-Eedaah", subtitle: "Ibn Baaz, on Hajj and Umrah"),
+            ArticleSource(title: "Manaasik al-Hajj wal-Umrah", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "How to Perform Umrah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/154979"),
+            ArticleSource(title: "What Is Umrah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/31819"),
         ],
         "WudhuView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
             ArticleSource(title: "How to Make Wudu", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11497"),
             ArticleSource(title: "What Are the Pillars of Wudu?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/226422"),
         ],
         "GhuslView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
             ArticleSource(title: "Description of Islamic Ghusl (Complete Body Ablution)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/415"),
             ArticleSource(title: "How to Make Ghusl for Major Impurity", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/82344"),
         ],
         "TayammumView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
             ArticleSource(title: "How to Perform Tayammum", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21074"),
             ArticleSource(title: "Can You Do Tayammum Instead of Ghusl?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/40204"),
         ],
         "JumuahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Is the khutbah a condition of Jumu`ah prayer being valid?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/290308"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Is the khutbah a condition of Jumuah prayer being valid?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/290308"),
             ArticleSource(title: "Conditions of Friday Khutbah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/115854"),
             ArticleSource(title: "Is Talking during Khutbah Permissible?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/45651"),
             ArticleSource(title: "What Are the Recommended Acts of Worship on Friday?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13815"),
         ],
         "KhutbahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in his khutbahs"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Khutbat al-Hajah", subtitle: "Al-Albani, the opening the Prophet taught his Companions"),
-            ArticleSource(title: "Al-Ajwibah an-Nafi'ah", subtitle: "Al-Albani, on the Friday Adhan and khutbah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in his khutbahs"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Khutbat al-Haajah", subtitle: "Al-Albaani, the opening the Prophet taught his Companions"),
+            ArticleSource(title: "Al-Ajwibah an-Naafi‘ah", subtitle: "Al-Albaani, on the Friday Adhan and khutbah"),
             ArticleSource(title: "Conditions of Friday Khutbah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/115854"),
             ArticleSource(title: "Friday khutbah in languages other than Arabic", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/112041"),
-            ArticleSource(title: "What is your opinion of a Jumu’ah khutbah that, along with the prayer, lasts ten minutes?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/112084"),
+            ArticleSource(title: "What is your opinion of a Jumuah khutbah that, along with the prayer, lasts ten minutes?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/112084"),
         ],
         "AdhanOtherView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Sifat Salat an-Nabi", subtitle: "Al-Albani, the Prophet's prayer described from the sahih hadith"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Sifaat Salaat an-Nabi", subtitle: "Al-Albaani, the Prophet's prayer described from the saheeh hadith"),
             ArticleSource(title: "How to Call Adhan", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21376"),
-            ArticleSource(title: "Is it valid to recite the adhan with thirteen phrases, including two takbirs at the beginning and without tarji` (repeating) of the Shahadatayn?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/340598"),
+            ArticleSource(title: "Is it valid to recite the adhan with thirteen phrases, including two takbeers at the beginning and without tarjee‘ (repeating) of the Shahaadatayn?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/340598"),
             ArticleSource(title: "Who Should Give Adhan?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/196257"),
             ArticleSource(title: "Is It Permissible to Give Recorded Adhan from Radio?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/48990"),
         ],
         "IqamahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Sifat Salat an-Nabi", subtitle: "Al-Albani, the Prophet's prayer described from the sahih hadith"),
-            ArticleSource(title: "Iqamah: How Is It Done?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10458"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Sifaat Salaat an-Nabi", subtitle: "Al-Albaani, the Prophet's prayer described from the saheeh hadith"),
+            ArticleSource(title: "Iqaamah: How Is It Done?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10458"),
             ArticleSource(title: "Is it prescribed to repeat the phrases of the iqaamah twice?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/111893"),
             ArticleSource(title: "Is there a set time for the iqaamah (call immediately before the prayer)?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/97009"),
         ],
         "RawatibView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Qiyam Ramadan", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Qiyaam Ramadan", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
             ArticleSource(title: "Sunnah Prayers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/1048"),
             ArticleSource(title: "Sunnah Prayers: 10 or 12?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175137"),
         ],
         "WitrView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Qiyam Ramadan", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Qiyaam Ramadan", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
             ArticleSource(title: "How to Pray Witr", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/46544"),
             ArticleSource(title: "When to Pray Witr?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/32577"),
         ],
         "TahajjudView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Qiyam Ramadan", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Qiyaam Ramadan", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
             ArticleSource(title: "How to Pray Tahajjud and Witr", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/216236"),
-            ArticleSource(title: "What Is the Difference between Tahajjud and Qiyam Al-layl?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/143240"),
+            ArticleSource(title: "What Is the Difference between Tahajjud and Qiyaam Al-layl?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/143240"),
         ],
         "DuhaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Qiyam Ramadan", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Duha Prayer: How Many Rak`ahs?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/209657"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Qiyaam Ramadan", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Duha Prayer: How Many Rak‘ahs?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/209657"),
             ArticleSource(title: "Duha Prayer Time", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22389"),
         ],
         "TaraweehView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Qiyam Ramadan", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Numbers of Rak'ahs in Tarawih Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/9036"),
-            ArticleSource(title: "Is Tarawih Prayed in Sets of Two Rak`ahs?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/106463"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Qiyaam Ramadan", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Numbers of Rak‘ahs in Taraaweeh Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/9036"),
+            ArticleSource(title: "Is Taraaweeh Prayed in Sets of Two Rak‘ahs?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/106463"),
         ],
         "JanazahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ahkam al-Jana'iz", subtitle: "Al-Albani"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "How to Pray Salat al-Janazah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12363"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ahkaam al-Janaa’iz", subtitle: "Al-Albaani"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "How to Pray Salaat al-Janaazah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12363"),
             ArticleSource(title: "How to Wash the Deceased in Islam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/201085"),
         ],
         "IstikharahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-‘Asqalani, commentary on Sahih al-Bukhari, on the Istikharah hadith"),
-            ArticleSource(title: "Al-Wabil as-Sayyib", subtitle: "Ibn al-Qayyim, on dhikr and dua"),
-            ArticleSource(title: "Ad-Da' wad-Dawa'", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
-            ArticleSource(title: "How to Pray Istikharah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2217"),
-            ArticleSource(title: "Istikharah prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11981"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, commentary on Saheeh al-Bukhaari, on the Istikhaarah hadith"),
+            ArticleSource(title: "Al-Waabil as-Sayyib", subtitle: "Ibn al-Qayyim, on dhikr and dua"),
+            ArticleSource(title: "Ad-Da' wad-Dawaa'", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa‘eed ibn Ali al-Qahtaani, the authentic adhkaar and duas"),
+            ArticleSource(title: "How to Pray Istikhaarah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2217"),
+            ArticleSource(title: "Istikhaarah prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11981"),
         ],
         "TravelPrayerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Risalah fi Sujud as-Sahw", subtitle: "Ibn al-Uthaymin"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Risaalah fi Sujood as-Sahw", subtitle: "Ibn al-Uthaymeen"),
             ArticleSource(title: "Ruling on Shortening Prayers when Travelling", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/82751"),
             ArticleSource(title: "Is Combining Prayers when Travelling Permissible?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49885"),
         ],
         "CombinePrayersView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Mawaqit as-Salah", subtitle: "Ibn al-Uthaymin, on the times of the prayers"),
-            ArticleSource(title: "Al-Mughni", subtitle: "Ibn Qudamah"),
-            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, on joining and shortening"),
-            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volume 8"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Mawaaqeet as-Salaah", subtitle: "Ibn al-Uthaymeen, on the times of the prayers"),
+            ArticleSource(title: "Al-Mughni", subtitle: "Ibn Qudaamah"),
+            ArticleSource(title: "Majmoo‘ al-Fataawa", subtitle: "Ibn Taymiyyah, on joining and shortening"),
+            ArticleSource(title: "Fataawa al-Lajnah ad-Daa’imah", subtitle: "The Standing Committee, volume 8"),
             ArticleSource(title: "How to Combine Maghrib and Isha Prayers when Travelling", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/153665"),
             ArticleSource(title: "The difference between joining and shortening prayers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/105109"),
             ArticleSource(title: "Can You Combine Prayers before Travelling?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20017"),
             ArticleSource(title: "Ruling on Returning Home after Joining Prayers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22387"),
         ],
         "PlanePrayerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volumes 8 and 10, on prayer and fasting in an aircraft"),
-            ArticleSource(title: "I'lam al-Musafirin", subtitle: "Ibn al-Uthaymin, on the manners of travel and what concerns those who fly"),
-            ArticleSource(title: "Al-Mughni", subtitle: "Ibn Qudamah"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fataawa al-Lajnah ad-Daa’imah", subtitle: "The Standing Committee, volumes 8 and 10, on prayer and fasting in an aircraft"),
+            ArticleSource(title: "I‘laam al-Musaafireen", subtitle: "Ibn al-Uthaymeen, on the manners of travel and what concerns those who fly"),
+            ArticleSource(title: "Al-Mughni", subtitle: "Ibn Qudaamah"),
             ArticleSource(title: "How to Pray on a Plane", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/82536"),
             ArticleSource(title: "Praying on board an airplane", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21874"),
             ArticleSource(title: "How should a passenger on an airplane do wudu if there is no water?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/10798"),
             ArticleSource(title: "When a Traveler By Plane Breaks the Fast", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/37670"),
         ],
         "SickPrayerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Risalah fi Sujud as-Sahw", subtitle: "Ibn al-Uthaymin"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Risaalah fi Sujood as-Sahw", subtitle: "Ibn al-Uthaymeen"),
             ArticleSource(title: "Can You Pray Sitting Down?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/67934"),
             ArticleSource(title: "How to pray when lying down", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/294088"),
         ],
         "MissedPrayerView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Risalah fi Sujud as-Sahw", subtitle: "Ibn al-Uthaymin"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Risaalah fi Sujood as-Sahw", subtitle: "Ibn al-Uthaymeen"),
             ArticleSource(title: "Ruling on making up missed prayers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/13664"),
             ArticleSource(title: "How should missed prayers be made up?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20882"),
         ],
         "SujudSahwView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Risalah fi Sujud as-Sahw", subtitle: "Ibn al-Uthaymin"),
-            ArticleSource(title: "Reasons for Sujud As-Sahw", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12527"),
-            ArticleSource(title: "When to Offer Sujud As-Sahw", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/77430"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Risaalah fi Sujood as-Sahw", subtitle: "Ibn al-Uthaymeen"),
+            ArticleSource(title: "Reasons for Sujood As-Sahw", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12527"),
+            ArticleSource(title: "When to Offer Sujood As-Sahw", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/77430"),
         ],
         "VoluntaryFastsView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
             ArticleSource(title: "Voluntary Fasting in Islam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21979"),
-            ArticleSource(title: "Virtues of Shawwal Fasting", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7859"),
+            ArticleSource(title: "Virtues of Shawwaal Fasting", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7859"),
         ],
         "ItikafView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "How Did Prophet Muhammad Perform I'tikaf?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12658"),
-            ArticleSource(title: "Conditions of I'tikaaf", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12411"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "How Did Prophet Muhammad Perform I‘tikaaf?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12658"),
+            ArticleSource(title: "Conditions of I‘tikaaf", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12411"),
         ],
         "ZakatFitrView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
-            ArticleSource(title: "Bulugh al-Maram", subtitle: "Ibn Hajar al-Asqalani, the hadith of rulings with their grades"),
-            ArticleSource(title: "Rules of Zakat al-Fitr", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/207225"),
-            ArticleSource(title: "How Much Is Zakat al-Fitr?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49793"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
+            ArticleSource(title: "Buloogh al-Maraam", subtitle: "Ibn Hajar al-Asqalaani, the hadith of rulings with their grades"),
+            ArticleSource(title: "Rules of Zakaat al-Fitr", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/207225"),
+            ArticleSource(title: "How Much Is Zakaat al-Fitr?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/49793"),
         ],
         "TakbiratView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Ahkam al-Udhiyah wadh-Dhakah", subtitle: "Ibn al-Uthaymin"),
-            ArticleSource(title: "How to Pray 'Eid Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36491"),
-            ArticleSource(title: "'Eid Takbir: What Are the Different Formulas?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/158543"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Ahkaam al-Udhiyah wadh-Dhakaah", subtitle: "Ibn al-Uthaymeen"),
+            ArticleSource(title: "How to Pray Eid Prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36491"),
+            ArticleSource(title: "Eid Takbeer: What Are the Different Formulas?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/158543"),
         ],
         "UdhiyahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
-            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymin, commentary on Zad al-Mustaqni'"),
-            ArticleSource(title: "Ahkam al-Udhiyah wadh-Dhakah", subtitle: "Ibn al-Uthaymin"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in worship and daily life"),
+            ArticleSource(title: "Ash-Sharh al-Mumti'", subtitle: "Ibn al-Uthaymeen, commentary on Zad al-Mustaqni'"),
+            ArticleSource(title: "Ahkaam al-Udhiyah wadh-Dhakaah", subtitle: "Ibn al-Uthaymeen"),
             ArticleSource(title: "Conditions of Udhiyah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36755"),
             ArticleSource(title: "Rulings of Udhiyah", subtitle: "IslamQA", url: "https://islamqa.info/en/articles/67"),
         ],
         "BecomeMuslimView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Usul ath-Thalathah", subtitle: "Muhammad ibn Abd al-Wahhab, the three fundamental principles"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
-            ArticleSource(title: "Fatawa Arkan al-Islam", subtitle: "Ibn al-Uthaymin, on the pillars of Islam"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Usool ath-Thalaathah", subtitle: "Muhammad ibn Abd al-Wahhaab, the three fundamental principles"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, with Fath al-Majeed by Abd ar-Rahman ibn Hasan"),
+            ArticleSource(title: "Fataawa Arkaan al-Islam", subtitle: "Ibn al-Uthaymeen, on the pillars of Islam"),
             ArticleSource(title: "How to Become a Muslim", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11819"),
             ArticleSource(title: "A person just accepting Islam should pronounce shahaadah before wudu", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/177"),
         ],
         "TawbahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Madarij as-Salikin, the station of tawbah", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Ad-Da' wad-Dawa'", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Riyad as-Salihin", subtitle: "An-Nawawi, with the takhrij of al-Albani"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Madaarij as-Saalikeen, the station of tawbah", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Ad-Da' wad-Dawaa'", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Riyaad as-Saaliheen", subtitle: "An-Nawawi, with the takhreej of al-Albaani"),
             ArticleSource(title: "Conditions of Repentance", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/289765"),
             ArticleSource(title: "How to Repent in Islam", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/14289"),
         ],
         "MakeDuaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Al-Wabil as-Sayyib", subtitle: "Ibn al-Qayyim, on dhikr and dua"),
-            ArticleSource(title: "Ad-Da' wad-Dawa'", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
-            ArticleSource(title: "How to Make Du'a", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36902"),
-            ArticleSource(title: "Times When Du`a Is Accepted", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22438"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Waabil as-Sayyib", subtitle: "Ibn al-Qayyim, on dhikr and dua"),
+            ArticleSource(title: "Ad-Da' wad-Dawaa'", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa‘eed ibn Ali al-Qahtaani, the authentic adhkaar and duas"),
+            ArticleSource(title: "How to Make Dua", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/36902"),
+            ArticleSource(title: "Times When Dua Is Accepted", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22438"),
         ],
         "RuqyahView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, the chapters on ruqyah, amulets and nushrah"),
-            ArticleSource(title: "Al-Qawl al-Mufid 'ala Kitab at-Tawhid", subtitle: "Ibn al-Uthaymin, its explanation"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, on the conditions of ruqyah"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's medicine"),
-            ArticleSource(title: "Majmu' Fatawa Ibn Baz", subtitle: "Ibn Baz, on ruqyah and the treatment of magic"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Kitaab at-Tawheed", subtitle: "Muhammad ibn Abd al-Wahhaab, the chapters on ruqyah, amulets and nushrah"),
+            ArticleSource(title: "Al-Qawl al-Mufeed 'ala Kitaab at-Tawheed", subtitle: "Ibn al-Uthaymeen, its explanation"),
+            ArticleSource(title: "Fath al-Baari", subtitle: "Ibn Hajar al-Asqalaani, on the conditions of ruqyah"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's medicine"),
+            ArticleSource(title: "Majmoo‘ Fataawa Ibn Baaz", subtitle: "Ibn Baaz, on ruqyah and the treatment of magic"),
             ArticleSource(title: "Selection of Verses and Supplications for Incantation Purposes", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/175189"),
             ArticleSource(title: "What conditions should be met by a “raaqi”?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/7874"),
             ArticleSource(title: "“Recite your ruqyahs to me. There is nothing wrong with a ruqyah that does not involve shirk”", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/209745"),
-            ArticleSource(title: "Taking payment for reciting Qur’aan over a sick person", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12627"),
+            ArticleSource(title: "Taking payment for reciting Quran over a sick person", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12627"),
             ArticleSource(title: "UnIslamic ruqyah may be a cause of harm", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/180492"),
         ],
         "EvilEyeGuideView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Zad al-Ma'ad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in treating the one struck by the eye"),
-            ArticleSource(title: "Fath al-Bari and Sharh Sahih Muslim", subtitle: "Ibn Hajar and an-Nawawi, on the washing of the one the eye came from"),
-            ArticleSource(title: "Al-Muwatta", subtitle: "Malik ibn Anas, the Book of the Eye: the washing of 'Amir ibn Rabi'ah"),
-            ArticleSource(title: "Bada'i' al-Fawa'id", subtitle: "Ibn al-Qayyim, on Surah al-Falaq: ten things that turn away the envier's harm"),
-            ArticleSource(title: "Majmu' Fatawa wa Rasa'il and al-Qawl al-Mufid", subtitle: "Ibn al-Uthaymin, on the eye, its treatment, and lawful precaution"),
-            ArticleSource(title: "Majmu' Fatawa Ibn Baz and Fatawa Nur 'ala ad-Darb", subtitle: "Ibn Baz, on treating the eye, what to say, and amulets"),
-            ArticleSource(title: "Fatawa al-Lajnah ad-Da'imah", subtitle: "The Standing Committee, volume 1: the eye, its washing, and fumigation"),
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Saheeh al-Bukhaari and Saheeh Muslim, with the graded Sunan"),
+            ArticleSource(title: "Zad al-Ma‘aad", subtitle: "Ibn al-Qayyim, the Prophet's guidance in treating the one struck by the eye"),
+            ArticleSource(title: "Fath al-Baari and Sharh Saheeh Muslim", subtitle: "Ibn Hajar and an-Nawawi, on the washing of the one the eye came from"),
+            ArticleSource(title: "Al-Muwatta", subtitle: "Maalik ibn Anas, the Book of the Eye: the washing of Aamir ibn Rabee‘ah"),
+            ArticleSource(title: "Badaa’i‘ al-Fawaa’id", subtitle: "Ibn al-Qayyim, on Surah al-Falaq: ten things that turn away the envier's harm"),
+            ArticleSource(title: "Majmoo‘ Fataawa wa Rasaa’il and al-Qawl al-Mufeed", subtitle: "Ibn al-Uthaymeen, on the eye, its treatment, and lawful precaution"),
+            ArticleSource(title: "Majmoo‘ Fataawa Ibn Baaz and Fataawa Noor 'ala ad-Darb", subtitle: "Ibn Baaz, on treating the eye, what to say, and amulets"),
+            ArticleSource(title: "Fataawa al-Lajnah ad-Daa’imah", subtitle: "The Standing Committee, volume 1: the eye, its washing, and fumigation"),
             ArticleSource(title: "Protection from the Evil Eye: How?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/20954"),
             ArticleSource(title: "How to Protect Yourself from the Evil Eye", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11359"),
-            ArticleSource(title: "Barak Allahu Laka or ‘Alayk: Ward off the Evil Eye by It", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/130786"),
+            ArticleSource(title: "Baarak Allahu Laka or Alayk: Ward off the Evil Eye by It", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/130786"),
             ArticleSource(title: "How can a person know who has envied him, and how should the one who has been envied be treated?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/45659"),
             ArticleSource(title: "Wearing gold on which Aayat al-Kursiy is engraved or which is in the shape of an eye or hand", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/91370"),
         ],

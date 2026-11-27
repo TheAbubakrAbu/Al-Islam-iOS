@@ -909,24 +909,24 @@ extension ArticleIsnad {
     /// the shelf; death dates from Ibn Hajar's Taqrib at-Tahdhib.
     static let bukhariFirst = ArticleIsnad(
         title: "Actions Are by Intentions",
-        subtitle: "Sahih al-Bukhari 1 · Sahih Muslim 1907",
+        subtitle: "Saheeh al-Bukhaari 1 · Saheeh Muslim 1907",
         chain: IsnadChain(
             top: [
                 layer("THE PROPHET ﷺ", prophet),
-                layer("THE COMPANION", node("‘Umar ibn al-Khattab", "عُمَرُ بنُ الخَطَّابِ", "d. 23 AH, from the minbar", .companion)),
-                layer("THE SUCCESSOR", node("‘Alqamah ibn Waqqas al-Laythi", "عَلقَمَةُ بنُ وَقَّاصٍ اللَّيثِيُّ", "of Madinah, d. 65–86 AH", .successor)),
-                layer("HIS STUDENT", node("Muhammad ibn Ibrahim at-Taymi", "مُحَمَّدُ بنُ إِبرَاهِيمَ التَّيمِيُّ", "of Madinah, d. 120 AH", .successor)),
-                layer("WHERE THE CHAIN DIVIDES", node("Yahya ibn Sa‘id al-Ansari", "يَحيَى بنُ سَعِيدٍ الأَنصَارِيُّ", "of Madinah, d. 144 AH or after", .imam)),
+                layer("THE COMPANION", node("Umar ibn al-Khattaab", "عُمَرُ بنُ الخَطَّابِ", "d. 23 AH, from the minbar", .companion)),
+                layer("THE SUCCESSOR", node("Alqamah ibn Waqqaas al-Laythi", "عَلقَمَةُ بنُ وَقَّاصٍ اللَّيثِيُّ", "of Madinah, d. 65–86 AH", .successor)),
+                layer("HIS STUDENT", node("Muhammad ibn Ibraaheem at-Taymi", "مُحَمَّدُ بنُ إِبرَاهِيمَ التَّيمِيُّ", "of Madinah, d. 120 AH", .successor)),
+                layer("WHERE THE CHAIN DIVIDES", node("Yahya ibn Sa‘eed al-Ansaari", "يَحيَى بنُ سَعِيدٍ الأَنصَارِيُّ", "of Madinah, d. 144 AH or after", .imam)),
             ],
             branches: [
                 IsnadBranch(id: "bukhari", highlighted: true, layers: [
-                    layer("HIS STUDENT", node("Sufyan ibn ‘Uyaynah", "سُفيَانُ بنُ عُيَينَةَ", "of Makkah, d. 198 AH", .link)),
+                    layer("HIS STUDENT", node("Sufyaan ibn Uyaynah", "سُفيَانُ بنُ عُيَينَةَ", "of Makkah, d. 198 AH", .link)),
                     layer("HIS STUDENT", node("al-Humaydi", "عَبدُ اللَّهِ بنُ الزُّبَيرِ الحُمَيدِيُّ", "of Makkah, d. 219 AH", .link)),
-                    layer("THE COLLECTOR", node("al-Bukhari", "مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ", "d. 256 AH", .narrator)),
+                    layer("THE COLLECTOR", node("al-Bukhaari", "مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ", "d. 256 AH", .narrator)),
                 ]),
                 IsnadBranch(id: "muslim", highlighted: true, layers: [
-                    layer("HIS STUDENT", node("Malik ibn Anas", "مَالِكُ بنُ أَنَسٍ", "of Madinah, d. 179 AH", .link)),
-                    layer("HIS STUDENT", node("al-Qa‘nabi", "عَبدُ اللَّهِ بنُ مَسلَمَةَ القَعنَبِيُّ", "of Basra, d. 221 AH", .link)),
+                    layer("HIS STUDENT", node("Maalik ibn Anas", "مَالِكُ بنُ أَنَسٍ", "of Madinah, d. 179 AH", .link)),
+                    layer("HIS STUDENT", node("al-Qa‘nabi", "عَبدُ اللَّهِ بنُ مَسلَمَةَ القَعنَبِيُّ", "of Basrah, d. 221 AH", .link)),
                     layer("THE COLLECTOR", node("Muslim", "مُسلِمُ بنُ الحَجَّاجِ", "d. 261 AH", .narrator)),
                 ]),
             ]))
@@ -941,10 +941,10 @@ extension ArticleIsnad {
         chain: IsnadChain(
             top: [
                 IsnadLayer(title: "", nodes: [IsnadNode(name: "The Prophet ﷺ", arabic: "", role: .prophet)]),
-                IsnadLayer(title: "", nodes: [IsnadNode(name: "‘Umar ibn al-Khattab", arabic: "", role: .companion, count: "1")]),
-                IsnadLayer(title: "", nodes: [IsnadNode(name: "‘Alqamah ibn Waqqas", arabic: "", role: .link, count: "1")]),
-                IsnadLayer(title: "", nodes: [IsnadNode(name: "Muhammad ibn Ibrahim at-Taymi", arabic: "", role: .link, count: "1")]),
-                IsnadLayer(title: "", nodes: [IsnadNode(name: "Yahya ibn Sa‘id al-Ansari", arabic: "", role: .link, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "Umar ibn al-Khattaab", arabic: "", role: .companion, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "Alqamah ibn Waqqaas", arabic: "", role: .link, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "Muhammad ibn Ibraaheem at-Taymi", arabic: "", role: .link, count: "1")]),
+                IsnadLayer(title: "", nodes: [IsnadNode(name: "Yahya ibn Sa‘eed al-Ansaari", arabic: "", role: .link, count: "1")]),
             ],
             branches: [],
             fan: IsnadFan(rays: 9, caption: "then a great many narrators from Yahya")),
@@ -953,23 +953,23 @@ extension ArticleIsnad {
     /// The Sahifah of Hammam ibn Munabbih, which both Sahihs take from ‘Abd ar-Razzaq: Sahih al-Bukhari
     /// 2073 through Yahya ibn Musa, Sahih Muslim 225 through Muhammad ibn Rafi‘ (read from both rows).
     static let hammamSahifah = ArticleIsnad(
-        title: "The Sahifah of Hammam",
-        subtitle: "Sahih al-Bukhari 2073 · Sahih Muslim 225",
+        title: "The Saheefah of Hammaam",
+        subtitle: "Saheeh al-Bukhaari 2073 · Saheeh Muslim 225",
         chain: IsnadChain(
             top: [
                 layer("THE PROPHET ﷺ", prophet),
                 layer("THE COMPANION", node("Abu Hurayrah", "أَبُو هُرَيرَةَ", "d. 57–59 AH", .companion)),
-                layer("WHO WROTE IT DOWN", node("Hammam ibn Munabbih", "هَمَّامُ بنُ مُنَبِّهٍ", "of San‘a, d. 132 AH", .successor)),
-                layer("HIS STUDENT", node("Ma‘mar ibn Rashid", "مَعمَرُ بنُ رَاشِدٍ", "of Basra, settled in Yemen, d. 154 AH", .link)),
-                layer("WHERE THE CHAIN DIVIDES", node("‘Abd ar-Razzaq as-San‘ani", "عَبدُ الرَّزَّاقِ الصَّنعَانِيُّ", "author of the Musannaf, d. 211 AH", .imam)),
+                layer("WHO WROTE IT DOWN", node("Hammaam ibn Munabbih", "هَمَّامُ بنُ مُنَبِّهٍ", "of San‘a, d. 132 AH", .successor)),
+                layer("HIS STUDENT", node("Ma‘mar ibn Raashid", "مَعمَرُ بنُ رَاشِدٍ", "of Basrah, settled in Yemen, d. 154 AH", .link)),
+                layer("WHERE THE CHAIN DIVIDES", node("Abd ar-Razzaaq as-San‘aani", "عَبدُ الرَّزَّاقِ الصَّنعَانِيُّ", "author of the Musannaf, d. 211 AH", .imam)),
             ],
             branches: [
                 IsnadBranch(id: "bukhari", highlighted: true, layers: [
-                    layer("HIS STUDENT", node("Yahya ibn Musa", "يَحيَى بنُ مُوسَى", "of Balkh, d. 240 AH", .link)),
-                    layer("THE COLLECTOR", node("al-Bukhari", "مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ", "d. 256 AH", .narrator)),
+                    layer("HIS STUDENT", node("Yahya ibn Moosa", "يَحيَى بنُ مُوسَى", "of Balkh, d. 240 AH", .link)),
+                    layer("THE COLLECTOR", node("al-Bukhaari", "مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ", "d. 256 AH", .narrator)),
                 ]),
                 IsnadBranch(id: "muslim", highlighted: true, layers: [
-                    layer("HIS STUDENT", node("Muhammad ibn Rafi‘", "مُحَمَّدُ بنُ رَافِعٍ", "of Nishapur, d. 245 AH", .link)),
+                    layer("HIS STUDENT", node("Muhammad ibn Raafi‘", "مُحَمَّدُ بنُ رَافِعٍ", "of Nishapur, d. 245 AH", .link)),
                     layer("THE COLLECTOR", node("Muslim", "مُسلِمُ بنُ الحَجَّاجِ", "d. 261 AH", .narrator)),
                 ]),
             ]))
@@ -978,14 +978,14 @@ extension ArticleIsnad {
     /// ash-Shafi‘i, Malik's student, and Ahmad, ash-Shafi‘i's: the chain the scholars called golden.
     static let goldenChain = ArticleIsnad(
         title: "The Golden Chain",
-        subtitle: "Malik from Nafi‘ from Ibn ‘Umar",
+        subtitle: "Maalik from Naafi‘ from Ibn Umar",
         chain: IsnadChain(
             top: [
                 layer("THE PROPHET ﷺ", prophet),
-                layer("THE COMPANION", node("‘Abdullah ibn ‘Umar", "عَبدُ اللَّهِ بنُ عُمَرَ", "d. 73 AH", .companion)),
-                layer("HIS FREED SLAVE", node("Nafi‘", "نَافِعٌ مَولَى ابنِ عُمَرَ", "of Madinah, d. 117 AH", .successor)),
-                layer("THE IMAM OF MADINAH", node("Malik ibn Anas", "مَالِكُ بنُ أَنَسٍ", "d. 179 AH", .narrator)),
-                layer("HIS STUDENT", node("ash-Shafi‘i", "مُحَمَّدُ بنُ إِدرِيسَ الشَّافِعِيُّ", "d. 204 AH", .link)),
+                layer("THE COMPANION", node("Abdullah ibn Umar", "عَبدُ اللَّهِ بنُ عُمَرَ", "d. 73 AH", .companion)),
+                layer("HIS FREED SLAVE", node("Naafi‘", "نَافِعٌ مَولَى ابنِ عُمَرَ", "of Madinah, d. 117 AH", .successor)),
+                layer("THE IMAM OF MADINAH", node("Maalik ibn Anas", "مَالِكُ بنُ أَنَسٍ", "d. 179 AH", .narrator)),
+                layer("HIS STUDENT", node("ash-Shaafi‘i", "مُحَمَّدُ بنُ إِدرِيسَ الشَّافِعِيُّ", "d. 204 AH", .link)),
                 layer("HIS STUDENT", node("Ahmad ibn Hanbal", "أَحمَدُ بنُ حَنبَلٍ", "d. 241 AH", .link)),
             ],
             branches: []))
@@ -996,35 +996,35 @@ extension ArticleIsnad {
     /// the Prophet named.
     static let quranCompilation = ArticleIsnad(
         title: "How the Quran Reached Us",
-        subtitle: "From the Prophet ﷺ to the copies of ‘Uthman",
+        subtitle: "From the Prophet ﷺ to the copies of Uthmaan",
         chain: IsnadChain(
             top: [
                 layer("THE SPEECH OF", node("Allah, Exalted is He", "اللَّهُ عَزَّ وَجَلَّ", "His speech, not created", .source)),
-                layer("BROUGHT DOWN BY", node("Jibril", "جِبرِيلُ عَلَيهِ السَّلَامُ", "the trustworthy Spirit (26:193)", .companion)),
+                layer("BROUGHT DOWN BY", node("Jibreel", "جِبرِيلُ عَلَيهِ السَّلَامُ", "the trustworthy Spirit (26:193)", .companion)),
                 layer("TO", prophet),
                 layer("WHO TAUGHT IT TO THE COMPANIONS",
-                      node("‘Abdullah ibn Mas‘ud", "عَبدُ اللَّهِ بنُ مَسعُودٍ", "d. 32 AH", .companion),
-                      node("Salim, mawla of Abu Hudhayfah", "سَالِمٌ مَولَى أَبِي حُذَيفَةَ", "fell at al-Yamamah, 12 AH", .companion),
-                      node("Mu‘adh ibn Jabal", "مُعَاذُ بنُ جَبَلٍ", "d. 18 AH", .companion),
+                      node("Abdullah ibn Mas‘ood", "عَبدُ اللَّهِ بنُ مَسعُودٍ", "d. 32 AH", .companion),
+                      node("Saalim, mawla of Abu Hudhayfah", "سَالِمٌ مَولَى أَبِي حُذَيفَةَ", "fell at al-Yamaamah, 12 AH", .companion),
+                      node("Mu‘aadh ibn Jabal", "مُعَاذُ بنُ جَبَلٍ", "d. 18 AH", .companion),
                       node("Ubayy ibn Ka‘b", "أُبَيُّ بنُ كَعبٍ", "d. 30 AH", .companion),
-                      node("Zayd ibn Thabit", "زَيدُ بنُ ثَابِتٍ", "his scribe, d. 45 AH", .companion),
-                      node("‘Ali ibn Abi Talib", "عَلِيُّ بنُ أَبِي طَالِبٍ", "d. 40 AH", .companion)),
+                      node("Zayd ibn Thaabit", "زَيدُ بنُ ثَابِتٍ", "his scribe, d. 45 AH", .companion),
+                      node("Ali ibn Abi Taalib", "عَلِيُّ بنُ أَبِي طَالِبٍ", "d. 40 AH", .companion)),
                 layer("GATHERED INTO ONE VOLUME, 12 AH",
-                      node("Abu Bakr as-Siddiq", "أَبُو بَكرٍ الصِّدِّيقُ", "ordered it at ‘Umar's counsel, d. 13 AH", .imam),
-                      node("Zayd ibn Thabit", "زَيدُ بنُ ثَابِتٍ", "gathered it from the written pieces and the memories of men", .link)),
-                layer("KEPT BY", node("Hafsah bint ‘Umar", "حَفصَةُ بِنتُ عُمَرَ", "the sheets passed from Abu Bakr to ‘Umar, then to her", .link)),
-                layer("COPIED UNDER ‘UTHMAN, c. 25 AH",
-                      node("‘Uthman ibn ‘Affan", "عُثمَانُ بنُ عَفَّانَ", "ordered the copies, d. 35 AH", .imam),
-                      node("Zayd ibn Thabit", "زَيدُ بنُ ثَابِتٍ", "d. 45 AH", .link),
-                      node("‘Abdullah ibn az-Zubayr", "عَبدُ اللَّهِ بنُ الزُّبَيرِ", "d. 73 AH", .link),
-                      node("Sa‘id ibn al-‘As", "سَعِيدُ بنُ العَاصِ", "d. c. 59 AH", .link),
-                      node("‘Abd ar-Rahman ibn al-Harith", "عَبدُ الرَّحمَنِ بنُ الحَارِثِ بنِ هِشَامٍ", "d. 43 AH", .link)),
+                      node("Abu Bakr as-Siddeeq", "أَبُو بَكرٍ الصِّدِّيقُ", "ordered it at Umar's counsel, d. 13 AH", .imam),
+                      node("Zayd ibn Thaabit", "زَيدُ بنُ ثَابِتٍ", "gathered it from the written pieces and the memories of men", .link)),
+                layer("KEPT BY", node("Hafsah bint Umar", "حَفصَةُ بِنتُ عُمَرَ", "the sheets passed from Abu Bakr to Umar, then to her", .link)),
+                layer("COPIED UNDER UTHMAAN, c. 25 AH",
+                      node("Uthmaan ibn Affaan", "عُثمَانُ بنُ عَفَّانَ", "ordered the copies, d. 35 AH", .imam),
+                      node("Zayd ibn Thaabit", "زَيدُ بنُ ثَابِتٍ", "d. 45 AH", .link),
+                      node("Abdullah ibn az-Zubayr", "عَبدُ اللَّهِ بنُ الزُّبَيرِ", "d. 73 AH", .link),
+                      node("Sa‘eed ibn al-As", "سَعِيدُ بنُ العَاصِ", "d. c. 59 AH", .link),
+                      node("Abd ar-Rahman ibn al-Haarith", "عَبدُ الرَّحمَنِ بنُ الحَارِثِ بنِ هِشَامٍ", "d. 43 AH", .link)),
                 layer("SENT TO THE CITIES, AND READ THERE BY",
-                      node("Madinah", "المَدِينَةُ", "Nafi‘ and Abu Ja‘far", .student),
-                      node("Makkah", "مَكَّةُ", "Ibn Kathir", .student),
-                      node("Sham", "الشَّامُ", "Ibn ‘Amir", .student),
-                      node("Basra", "البَصرَةُ", "Abu ‘Amr and Ya‘qub", .student),
-                      node("Kufa", "الكُوفَةُ", "‘Asim, Hamzah, al-Kisa’i and Khalaf", .student)),
+                      node("Madinah", "المَدِينَةُ", "Naafi‘ and Abu Ja‘far", .student),
+                      node("Makkah", "مَكَّةُ", "Ibn Katheer", .student),
+                      node("Shaam", "الشَّامُ", "Ibn Aamir", .student),
+                      node("Basrah", "البَصرَةُ", "Abu Amr and Ya‘qoob", .student),
+                      node("Koofah", "الكُوفَةُ", "Aasim, Hamzah, al-Kisaa’i and Khalaf", .student)),
             ],
             branches: []))
 
@@ -1032,27 +1032,27 @@ extension ArticleIsnad {
     /// from Ibn ‘Umar to Malik, ash-Shafi‘i and Ahmad.
     static let madhhabImams = ArticleIsnad(
         title: "Where the Four Imams Learned",
-        subtitle: "From the Companions to the four madhahib",
+        subtitle: "From the Companions to the four madhaahib",
         chain: IsnadChain(
             top: [
                 layer("THE PROPHET ﷺ", prophet),
             ],
             branches: [
                 IsnadBranch(id: "kufa", highlighted: true, layers: [
-                    layer("THE COMPANION", node("‘Abdullah ibn Mas‘ud", "عَبدُ اللَّهِ بنُ مَسعُودٍ", "d. 32 AH, taught in Kufa", .companion)),
-                    layer("HIS STUDENT", node("‘Alqamah ibn Qays", "عَلقَمَةُ بنُ قَيسٍ النَّخَعِيُّ", "d. after 60 AH", .successor)),
-                    layer("HIS STUDENT", node("Ibrahim an-Nakha‘i", "إِبرَاهِيمُ النَّخَعِيُّ", "d. 96 AH", .successor)),
-                    layer("HIS STUDENT", node("Hammad ibn Abi Sulayman", "حَمَّادُ بنُ أَبِي سُلَيمَانَ", "d. 120 AH", .link)),
-                    layer("THE IMAM", node("Abu Hanifa", "أَبُو حَنِيفَةَ النُّعمَانُ", "d. 150 AH", .narrator)),
+                    layer("THE COMPANION", node("Abdullah ibn Mas‘ood", "عَبدُ اللَّهِ بنُ مَسعُودٍ", "d. 32 AH, taught in Koofah", .companion)),
+                    layer("HIS STUDENT", node("Alqamah ibn Qays", "عَلقَمَةُ بنُ قَيسٍ النَّخَعِيُّ", "d. after 60 AH", .successor)),
+                    layer("HIS STUDENT", node("Ibraaheem an-Nakha‘i", "إِبرَاهِيمُ النَّخَعِيُّ", "d. 96 AH", .successor)),
+                    layer("HIS STUDENT", node("Hammaad ibn Abi Sulaymaan", "حَمَّادُ بنُ أَبِي سُلَيمَانَ", "d. 120 AH", .link)),
+                    layer("THE IMAM", node("Abu Haneefah", "أَبُو حَنِيفَةَ النُّعمَانُ", "d. 150 AH", .narrator)),
                     layer("HIS STUDENTS",
-                          node("Abu Yusuf", "أَبُو يُوسُفَ", "d. 182 AH", .student),
-                          node("Muhammad ash-Shaybani", "مُحَمَّدُ بنُ الحَسَنِ الشَّيبَانِيُّ", "d. 189 AH", .student)),
+                          node("Abu Yoosuf", "أَبُو يُوسُفَ", "d. 182 AH", .student),
+                          node("Muhammad ash-Shaybaani", "مُحَمَّدُ بنُ الحَسَنِ الشَّيبَانِيُّ", "d. 189 AH", .student)),
                 ]),
                 IsnadBranch(id: "madinah", highlighted: true, layers: [
-                    layer("THE COMPANION", node("‘Abdullah ibn ‘Umar", "عَبدُ اللَّهِ بنُ عُمَرَ", "d. 73 AH, of Madinah", .companion)),
-                    layer("HIS STUDENT", node("Nafi‘", "نَافِعٌ مَولَى ابنِ عُمَرَ", "d. 117 AH", .successor)),
-                    layer("THE IMAM", node("Malik ibn Anas", "مَالِكُ بنُ أَنَسٍ", "d. 179 AH", .narrator)),
-                    layer("HIS STUDENT", node("ash-Shafi‘i", "مُحَمَّدُ بنُ إِدرِيسَ الشَّافِعِيُّ", "d. 204 AH", .narrator)),
+                    layer("THE COMPANION", node("Abdullah ibn Umar", "عَبدُ اللَّهِ بنُ عُمَرَ", "d. 73 AH, of Madinah", .companion)),
+                    layer("HIS STUDENT", node("Naafi‘", "نَافِعٌ مَولَى ابنِ عُمَرَ", "d. 117 AH", .successor)),
+                    layer("THE IMAM", node("Maalik ibn Anas", "مَالِكُ بنُ أَنَسٍ", "d. 179 AH", .narrator)),
+                    layer("HIS STUDENT", node("ash-Shaafi‘i", "مُحَمَّدُ بنُ إِدرِيسَ الشَّافِعِيُّ", "d. 204 AH", .narrator)),
                     layer("HIS STUDENT", node("Ahmad ibn Hanbal", "أَحمَدُ بنُ حَنبَلٍ", "d. 241 AH", .narrator)),
                 ]),
             ]))
@@ -1065,6 +1065,6 @@ extension ArticleIsnad {
         #else
         let chain = IsnadChain(top: [], branches: [])
         #endif
-        return ArticleIsnad(title: "Hafs an ‘Asim", subtitle: "The chain of the reading most Muslims recite", chain: chain)
+        return ArticleIsnad(title: "Hafs an Aasim", subtitle: "The chain of the reading most Muslims recite", chain: chain)
     }
 }

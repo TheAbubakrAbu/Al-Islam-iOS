@@ -66,7 +66,7 @@ enum TutorialTab: String, CaseIterable, Identifiable {
     var summary: String {
         switch self {
         #if HAS_ADHAN
-        case .adhan: return String(localized: "Prayer times, your home city, the adhan and the Qibla, one card at a time.")
+        case .adhan: return String(localized: "Prayer times, your home city, the adhan and the Qiblah, one card at a time.")
         #endif
         #if HAS_QURAN
         case .quran: return String(localized: "Reading, listening, tajweed colors and search, one card at a time.")
@@ -239,7 +239,7 @@ enum TutorialCatalog {
                      place: InterfaceText("Adhan tab"),
                      actions: [.setting(.notifications, label: InterfaceText("Notifications"))]),
         TutorialStep(id: "adhan.qibla", tab: .adhan, systemImage: "location.north.circle.fill",
-                     title: InterfaceText("The Qibla and the Hijri date"),
+                     title: InterfaceText("The Qiblah and the Hijri date"),
                      detail: InterfaceText("Tap the compass beside your city to make it larger and show your coordinates. Tap the date for the “Hijri Calendar”, or hold it to copy. If your local date differs, “Hijri Offset” moves it by up to three days."),
                      place: InterfaceText("Adhan tab"),
                      actions: [.setting(.prayerPage(.manualOffsets), label: InterfaceText("Manual Offsets"))]),

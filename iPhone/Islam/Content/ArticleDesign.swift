@@ -1024,16 +1024,16 @@ struct HadithGrade: Identifiable, Hashable {
     }
 
     static let all: [HadithGrade] = [
-        HadithGrade(name: "Sahih", arabic: "صَحِيح", english: "Authentic",
+        HadithGrade(name: "Saheeh", arabic: "صَحِيح", english: "Authentic",
                     definition: "An unbroken chain of upright narrators with precise memory from beginning to end, with no irregularity against stronger narrators and no hidden defect.",
                     verdict: "Accepted: a proof in belief and in law", rank: 0),
         HadithGrade(name: "Hasan", arabic: "حَسَن", english: "Good",
-                    definition: "The same conditions, except that a narrator's memory is a little lighter than the sahih narrator's. Still upright, still connected, still sound.",
-                    verdict: "Accepted: acted upon like the sahih", rank: 1),
-        HadithGrade(name: "Da'if", arabic: "ضَعِيف", english: "Weak",
+                    definition: "The same conditions, except that a narrator's memory is a little lighter than the saheeh narrator's. Still upright, still connected, still sound.",
+                    verdict: "Accepted: acted upon like the saheeh", rank: 1),
+        HadithGrade(name: "Da‘eef", arabic: "ضَعِيف", english: "Weak",
                     definition: "Missing one or more of those conditions: a break in the chain, an unknown narrator, a weak memory, or a narrator whose uprightness is in question.",
                     verdict: "Not established as his words", rank: 2),
-        HadithGrade(name: "Mawdu'", arabic: "مَوضُوع", english: "Fabricated",
+        HadithGrade(name: "Mawdoo‘", arabic: "مَوضُوع", english: "Fabricated",
                     definition: "A report invented and attributed to the Prophet (peace and blessings be upon him), usually exposed by a known liar in its chain or by its matn.",
                     verdict: "Rejected: never narrated except to expose it", rank: 3),
     ]
@@ -1042,10 +1042,10 @@ struct HadithGrade: Identifiable, Hashable {
     /// grading also has, from the fewest to the most (`HadithCountLadder` draws it; the corpus
     /// builder reads these literals, three strings a row).
     static let byNumber: [(name: String, arabic: String, meaning: String)] = [
-        ("Gharib", "غَرِيب", "One narrator at its narrowest level"),
-        ("'Aziz", "عَزِيز", "Two narrators at its narrowest level"),
-        ("Mashhur", "مَشهُور", "Three or more at its narrowest level"),
-        ("Mutawatir", "مُتَوَاتِر", "Too many, at every level, to agree on a lie"),
+        ("Ghareeb", "غَرِيب", "One narrator at its narrowest level"),
+        ("Azeez", "عَزِيز", "Two narrators at its narrowest level"),
+        ("Mashhoor", "مَشهُور", "Three or more at its narrowest level"),
+        ("Mutawaatir", "مُتَوَاتِر", "Too many, at every level, to agree on a lie"),
     ]
 
     /// The count each of those is named by, in `byNumber`'s order: what its medallion shows.
@@ -1154,7 +1154,7 @@ struct HadithCountLadder: View {
                 }
             }
 
-            ArticleParagraph(verbatim: "Everything short of mutawatir is called ahad. Ahad is a count, not a weakness: most of the Sunnah is ahad and sahih, and it is binding.",
+            ArticleParagraph(verbatim: "Everything short of mutawaatir is called aahaad. Aahaad is a count, not a weakness: most of the Sunnah is aahaad and saheeh, and it is binding.",
                              textStyle: .caption, secondary: true)
         }
         .padding(.vertical, 12)

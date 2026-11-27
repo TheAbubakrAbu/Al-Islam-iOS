@@ -24,10 +24,10 @@ final class AskAINamesTests: XCTestCase {
 
     @MainActor func testArticledOrCuedNamesMatch() async throws {
         try await loadNames()
-        XCTAssertEqual(names("What does Al-Wadud mean?"), ["Al-Wadud"])
-        XCTAssertEqual(names("explain ar rahman"), ["Ar-Rahman"])
-        XCTAssertEqual(names("what does al wadood mean"), ["Al-Wadud"])
-        XCTAssertEqual(names("Is Aziz a good name for a boy?"), ["Al-Aziz"])
+        XCTAssertEqual(names("What does Al-Wadud mean?"), ["Al-Wadood"])
+        XCTAssertEqual(names("explain ar rahman"), ["Ar-Rahmaan"])
+        XCTAssertEqual(names("what does al wadood mean"), ["Al-Wadood"])
+        XCTAssertEqual(names("Is Aziz a good name for a boy?"), ["Al-Azeez"])
         XCTAssertEqual(names("what does the name malik mean"), ["Al-Malik"])
     }
 

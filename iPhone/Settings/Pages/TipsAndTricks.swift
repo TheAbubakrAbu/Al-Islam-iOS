@@ -267,7 +267,7 @@ enum TipCatalog {
         #if HAS_ADHAN && HAS_QURAN
         return String(localized: "\"adhan\", \"tajweed\" or \"widget\"")
         #elseif HAS_ADHAN
-        return String(localized: "\"adhan\", \"qibla\" or \"widget\"")
+        return String(localized: "\"adhan\", \"qiblah\" or \"widget\"")
         #elseif HAS_QURAN
         return String(localized: "\"tajweed\", \"reciter\" or \"widget\"")
         #else
@@ -448,21 +448,21 @@ enum TipCatalog {
                detail: InterfaceText("Tap the countdown card to show or hide the extra prayer details beneath it."),
                place: InterfaceText("Adhan tab")),
 
-        AppTip(id: "adhan.compass", area: .adhan, group: InterfaceText("QIBLA AND PLACE"), systemImage: "location.north.line.fill",
+        AppTip(id: "adhan.compass", area: .adhan, group: InterfaceText("QIBLAH AND PLACE"), systemImage: "location.north.line.fill",
                title: InterfaceText("Enlarge the compass"),
-               detail: InterfaceText("Tap the row with your city and the small compass to enlarge the Qibla compass. It then shows your coordinates and elevation, and you can feel it: light taps while you are off, firmer ones as you close in, and a distinct one within five degrees."),
+               detail: InterfaceText("Tap the row with your city and the small compass to enlarge the Qiblah compass. It then shows your coordinates and elevation, and you can feel it: light taps while you are off, firmer ones as you close in, and a distinct one within five degrees."),
                place: InterfaceText("Adhan tab"), tour: true),
-        AppTip(id: "adhan.copy", area: .adhan, group: InterfaceText("QIBLA AND PLACE"), systemImage: "doc.on.doc",
+        AppTip(id: "adhan.copy", area: .adhan, group: InterfaceText("QIBLAH AND PLACE"), systemImage: "doc.on.doc",
                title: InterfaceText("Copy where and when you are"),
                detail: InterfaceText("Touch and hold the city name, the coordinates, or the Hijri date to copy them."),
                place: InterfaceText("Adhan tab")),
-        AppTip(id: "adhan.citytimes", area: .adhan, group: InterfaceText("QIBLA AND PLACE"), systemImage: "globe.europe.africa.fill",
+        AppTip(id: "adhan.citytimes", area: .adhan, group: InterfaceText("QIBLAH AND PLACE"), systemImage: "globe.europe.africa.fill",
                title: InterfaceText("Another city's prayer times"),
                detail: InterfaceText("Tap the city pill for City Prayer Times. Star the cities you check often, compare one with your own location, and read its times in its clock or yours. It never changes your own times."),
                place: InterfaceText("Adhan tab")),
-        AppTip(id: "adhan.glance", area: .adhan, group: InterfaceText("QIBLA AND PLACE"), systemImage: "rectangle.grid.2x2.fill",
+        AppTip(id: "adhan.glance", area: .adhan, group: InterfaceText("QIBLAH AND PLACE"), systemImage: "rectangle.grid.2x2.fill",
                title: InterfaceText("Every tile is a button"),
-               detail: InterfaceText("The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings."),
+               detail: InterfaceText("The AT A GLANCE tiles all open something. Qiblah opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings."),
                place: InterfaceText("Adhan tab"), tour: true, isAvailable: TipCatalog.outsideSimpleMode),
 
         AppTip(id: "adhan.trackerhold", area: .adhan, group: InterfaceText("THE PRAYER TRACKER"), systemImage: "checkmark.circle.fill",
@@ -550,7 +550,7 @@ enum TipCatalog {
                place: InterfaceText("Home Screen and Lock Screen")),
         AppTip(id: "adhan.controls", area: .adhan, group: InterfaceText("BEYOND THE APP"), systemImage: "switch.2",
                title: InterfaceText("The next prayer in Control Center"),
-               detail: InterfaceText("Two controls for Control Center, the Lock Screen, and the Action button: Prayer Times shows the next prayer and its time on the control itself and opens today's times, and Qibla opens the compass."),
+               detail: InterfaceText("Two controls for Control Center, the Lock Screen, and the Action button: Prayer Times shows the next prayer and its time on the control itself and opens today's times, and Qiblah opens the compass."),
                place: InterfaceText("Control Center, Add a Control"), isAvailable: { hasControls }),
         AppTip(id: "adhan.liveactivity", area: .adhan, group: InterfaceText("BEYOND THE APP"), systemImage: "fork.knife",
                title: InterfaceText("Ramadan on the Lock Screen"),

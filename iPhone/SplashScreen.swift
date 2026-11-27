@@ -468,7 +468,7 @@ struct SplashScreen: View {
         #if HAS_ADHAN && HAS_QURAN
         return String(localized: "prayer times, the Quran, hadith and more, in one place.")
         #elseif HAS_ADHAN
-        return String(localized: "prayer times, the adhan, the Qibla and more, in one place.")
+        return String(localized: "prayer times, the adhan, the Qiblah and more, in one place.")
         #else
         return String(localized: "the Quran with its tajweed, translations and reciters, in one place.")
         #endif

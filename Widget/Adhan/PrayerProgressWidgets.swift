@@ -943,6 +943,12 @@ struct PrayerRingNameLine: View {
 /// that is 160 pt wide on a 17 Pro, and a city of any length was set at the 0.6 floor and still cut
 /// (Abu: "circle is a little too big the city barely has any space"). The lines have that 14 pt now,
 /// and the city is a size down so that more of it is read before it shrinks at all.
+///
+/// The countdown is a semibold footnote since the same day (Abu: "make the countdown smaller to make
+/// more space"). As a bold headline it was the name line's twin, two equal lines that filled the widget
+/// from top to bottom with the city pressed under them. A subheadline was tried first and was too close
+/// to the headline to read as smaller; at the city's size, a weight heavier, the stack leaves air above
+/// and below, the next prayer and its time read first, and the timer reads as the detail under them.
 @available(iOS 16.0, *)
 struct PrayerRingLockView: View {
     var entry: PrayersProvider.Entry
@@ -957,7 +963,7 @@ struct PrayerRingLockView: View {
                     PrayerRingNameLine(next: next)
 
                     PrayerRingTimer(entry: entry, next: next)
-                        .font(.headline.bold().monospacedDigit())
+                        .font(.footnote.weight(.semibold).monospacedDigit())
 
                     if !entry.currentCity.isEmpty {
                         Text(entry.currentCity)

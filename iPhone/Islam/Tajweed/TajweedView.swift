@@ -134,7 +134,7 @@ struct TajweedCourseView: View {
                     if shows("learnmore") { learnMoreSection }
 
                     Section(footer:
-                        Text("Curriculum by Jamil Hammoudeh for Tilawa, used with permission, merged lesson by lesson with Al-Islam's Tajweed Foundations. Hafs an Asim, by the way of ash-Shatibiyyah. Example ayahs play in your chosen reciter.")
+                        Text("Curriculum by Jamil Hammoudeh for Tilawa, used with permission, merged lesson by lesson with Al-Islam's Tajweed Foundations. Hafs an Aasim, by the way of ash-Shaatibiyyah. Example ayahs play in your chosen reciter.")
                     ) { EmptyView() }
                 } else if course == nil, TajweedLessonsStore.isBundled {
                     // Typed before the pack landed: the spinner, not "no lessons match".
@@ -241,7 +241,7 @@ struct TajweedCourseView: View {
             systemImage: "graduationcap.fill",
             headline: String(localized: "Recite the Qur\u{2019}an with measured recitation."),
             source: String(localized: "Quran 73:4"),
-            message: String(localized: "One course for all of tajweed, Hafs an Asim by the way of ash-Shatibiyyah, taught in the classical order: read the letters, shape them, apply the rules, then read the mushaf. Every lesson explains its rule, shows it in real ayahs you can play, gives you words and patterns to practise, and ends with a self-check."),
+            message: String(localized: "One course for all of tajweed, Hafs an Aasim by the way of ash-Shaatibiyyah, taught in the classical order: read the letters, shape them, apply the rules, then read the mushaf. Every lesson explains its rule, shows it in real ayahs you can play, gives you words and patterns to practise, and ends with a self-check."),
             stats: lessons.isEmpty ? [] : [
                 ResourceHeroStat(lessons.count.formatted(), String(localized: "lessons")),
                 ResourceHeroStat((course?.chapters.count ?? 0).formatted(), String(localized: "chapters")),
@@ -351,7 +351,7 @@ struct TajweedCourseView: View {
                         Text("Tajweed Legend")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(.primary)
-                        Text("Every rule the Quran reader colors, for Hafs an Asim")
+                        Text("Every rule the Quran reader colors, for Hafs an Aasim")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

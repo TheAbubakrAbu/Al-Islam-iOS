@@ -790,7 +790,7 @@ enum AskAISourceFactory {
         }
         if topics.contains(.qibla) {
             let bearing = Qibla(coordinates: Coordinates(latitude: place.location.latitude, longitude: place.location.longitude)).direction
-            text += "\nThe qibla from \(place.name): the Kaaba lies \(Int(bearing.rounded())) degrees clockwise from true north, to the \(compassPoint(bearing)). The Qibla compass in the Adhan tab points to it."
+            text += "\nThe qiblah from \(place.name): the Ka‘bah lies \(Int(bearing.rounded())) degrees clockwise from true north, to the \(compassPoint(bearing)). The Qiblah compass in the Adhan tab points to it."
         }
 
         let plainToday = place.isHere && isToday && !topics.contains(.week)
@@ -799,8 +799,8 @@ enum AskAISourceFactory {
         let reference: String
         let title: String
         if !request.wantsTimes, topics.contains(.qibla) {
-            reference = "Qibla direction from \(place.name)"
-            title = "Qibla direction" + (cityTitle.isEmpty ? "" : " \u{00B7} \(cityTitle)")
+            reference = "Qiblah direction from \(place.name)"
+            title = "Qiblah direction" + (cityTitle.isEmpty ? "" : " \u{00B7} \(cityTitle)")
         } else if !request.wantsTimes {
             reference = "Islamic dates on \(shortSpan)"
             title = "Islamic dates \u{00B7} \(shortSpan)"

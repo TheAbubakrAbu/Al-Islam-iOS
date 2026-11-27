@@ -158,7 +158,7 @@ struct ProvingIslamView: View {
         "ProvingScienceView": "A seventh-century book that avoided the errors of the seventh century",
         "ProvingProphecyView": "Specific, public claims that could have failed, and did not",
         "ProvingSourcesView": "No Arabic Bible, and a text that corrects what it is accused of copying",
-        "ProvingBibleView": "Isma\u{2019}il\u{2019}s nation, a prophet like Musa, and the servant from Kedar",
+        "ProvingBibleView": "Isma\u{2019}il\u{2019}s nation, a prophet like Moosa, and the servant from Kedar",
         "ProvingScriptureView": "Confirming what remained true, adjudicating where the accounts differ",
         "ProvingEthicsView": "Justice against yourself, your family, and people you hate",
         "ProvingJesusView": "What the Gospels themselves say he said about God, and about himself",
@@ -209,7 +209,7 @@ struct ProvingIslamView: View {
     private var goFurtherSection: some View {
         Section(
             header: Text("GO FURTHER"),
-            footer: Text("Adapted with credit from Proving Islam: provingislam.net\u{2019}s \u{201C}The Complete Case\u{201D} and the proof articles of provingislam.com by Mohammad Baqer. The wording here is this app\u{2019}s own, and every ayah and hadith is quoted from the Quran and hadith collections bundled with it, sahih or hasan only.")
+            footer: Text("Adapted with credit from Proving Islam: provingislam.net\u{2019}s \u{201C}The Complete Case\u{201D} and the proof articles of provingislam.com by Mohammad Baqer. The wording here is this app\u{2019}s own, and every ayah and hadith is quoted from the Quran and hadith collections bundled with it, saheeh or hasan only.")
         ) {
             ArticleDoorRow(door: .link("https://provingislam.net/", title: "The Complete Case",
                                        subtitle: "provingislam.net: the full cumulative argument these chapters adapt"))
@@ -253,11 +253,11 @@ struct ProvingIslamProofsSection: View {
     }
 
     static let proofs: [Proof] = [
-        Proof(id: "mongols-sack-of-baghdad", title: "The Siege of Baghdad",
+        Proof(id: "mongols-sack-of-baghdad", title: "The Siege of Baghdaad",
               summary: "A city on the Tigris, and the broad-faced people who would come to its river bank",
               kind: "Prophecy", door: .prophecy("basrah-qantura")),
         Proof(id: "the-byzantine-comeback", title: "The Byzantine Comeback",
-              summary: "Surah ar-Rum names the losing empire as the winner, within a few years",
+              summary: "Surah ar-Room names the losing empire as the winner, within a few years",
               kind: "Prophecy", door: .prophecy("byzantines")),
         Proof(id: "sassanid-destruction", title: "The Fall of the Sassanid Empire",
               summary: "Chosroes tore the letter; his empire was torn apart",
@@ -271,11 +271,11 @@ struct ProvingIslamProofsSection: View {
         Proof(id: "green-arabia", title: "Green Arabia",
               summary: "Arabia was meadows and rivers, and will be again",
               kind: "Prophecy", door: .prophecy("arabia-meadows")),
-        Proof(id: "fire-of-hijaz", title: "The Fire of the Hijaz",
-              summary: "A fire in the Hijaz that would light up the necks of camels in Busra",
+        Proof(id: "fire-of-hijaz", title: "The Fire of the Hijaaz",
+              summary: "A fire in the Hijaaz that would light up the necks of camels in Busra",
               kind: "Prophecy", door: .prophecy("fire-hijaz")),
         Proof(id: "kingorpharaoh", title: "King or Pharaoh?",
-              summary: "The Quran calls Yusuf\u{2019}s ruler a king and Musa\u{2019}s a Pharaoh, matching when the title came into use",
+              summary: "The Quran calls Yoosuf\u{2019}s ruler a king and Moosa\u{2019}s a Pharaoh, matching when the title came into use",
               kind: "History", door: .miracle("pharaoh", title: "King or Pharaoh?")),
         Proof(id: "101-fulfilled-prophecies-1", title: "101 Fulfilled Islamic Prophecies",
               summary: "The whole collection, gathered in this app\u{2019}s Prophecies of the Prophet",

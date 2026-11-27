@@ -25,6 +25,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from transliteration import prose  # noqa: E402  the Islam tab's one spelling of names and terms
+
 ROOT = Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine/sources/Quran.json"
 OUT = ROOT / "iPhone/Islam/Library/ProphetFacts.swift"
@@ -382,11 +385,11 @@ def write_swift():
         key = fact["key"]
         mm = m[key]
         lines.append("        ProphetFacts(")
-        lines.append(f"            key: {swift_string(key)}, name: {swift_string(fact['name'])}, arabic: {swift_string(fact['arabic'])},")
-        lines.append(f"            english: {swift_string(fact['english'])},")
+        lines.append(f"            key: {swift_string(key)}, name: {swift_string(prose(fact['name']))}, arabic: {swift_string(fact['arabic'])},")
+        lines.append(f"            english: {swift_string(prose(fact['english']))},")
         lines.append("            tags: [")
         for kind, text in tags(key, m):
-            lines.append(f"                .init(kind: .{kind}, text: {swift_string(text)}),")
+            lines.append(f"                .init(kind: .{kind}, text: {swift_string(prose(text))}),")
         lines.append("            ],")
         lines.append(f"            times: {mm['times']}, ayahCount: {mm['ayahs']},")
         lines.append("            surahs: [")
@@ -394,7 +397,7 @@ def write_swift():
         lines.append("            ],")
         lines.append("            also: [")
         for label, times, groups in mm["also"]:
-            lines.append(f"                .init(label: {swift_string(label)}, times: {times}, surahs: [")
+            lines.append(f"                .init(label: {swift_string(prose(label))}, times: {times}, surahs: [")
             lines += surah_list(groups, "                    ")
             lines.append("                ]),")
         lines.append("            ],")

@@ -184,18 +184,18 @@ struct DuaAnswerHoursArt: View {
 
             VStack(spacing: 5) {
                 HStack(spacing: 5) {
-                    hour("moon.stars.fill", Text("Last Third of the Night"), source: "Al-Bukhari 1145", accent: accent)
-                    hour("speaker.wave.2.fill", Text("Between the adhan and the iqamah"), source: "Abu Dawud 521", accent: accent)
+                    hour("moon.stars.fill", Text("Last Third of the Night"), source: "Al-Bukhaari 1145", accent: accent)
+                    hour("speaker.wave.2.fill", Text("Between the adhan and the iqaamah"), source: "Abu Daawood 521", accent: accent)
                 }
                 HStack(spacing: 5) {
                     hour("arrow.down.to.line", Text("Prostration"), source: "Muslim 482", accent: accent)
-                    hour("calendar", Text("The last hour of Friday"), source: "Abu Dawud 1048", accent: accent)
+                    hour("calendar", Text("The last hour of Friday"), source: "Abu Daawood 1048", accent: accent)
                 }
             }
             // The two rows as one block, each tile as tall as the tallest beside it.
             .fixedSize(horizontal: false, vertical: true)
         }
-        .artFrame(Text("When a dua is most hoped to be answered: in the last third of the night, between the adhan and the iqamah, in prostration, and in the last hour of Friday, after Asr."))
+        .artFrame(Text("When a dua is most hoped to be answered: in the last third of the night, between the adhan and the iqaamah, in prostration, and in the last hour of Friday, after Asr."))
     }
 
     private func hour(_ symbol: String, _ title: Text, source: String, accent: Color) -> some View {
@@ -277,7 +277,7 @@ struct TasbihBeadsArt: View {
             }
         }
         .padding(.vertical, 2)
-        .artFrame(Text("A string of a hundred beads: thirty-three for Subhan Allah, thirty-three for Alhamdulillah and thirty-four for Allahu Akbar, said after every prayer."))
+        .artFrame(Text("A string of a hundred beads: thirty-three for SubhaanAllah, thirty-three for Alhamdulillah and thirty-four for Allahu Akbar, said after every prayer."))
     }
 }
 
@@ -491,7 +491,7 @@ struct ZakahQuarterTenthArt: View {
         }
         .padding(12)
         .artPanel(accent)
-        .artFrame(Text("Forty cells: one tenth of them marked, and a quarter of that tenth filled. One fortieth, two and a half percent: the zakah due on wealth held for a lunar year."))
+        .artFrame(Text("Forty cells: one tenth of them marked, and a quarter of that tenth filled. One fortieth, two and a half percent: the zakaah due on wealth held for a lunar year."))
     }
 
     private func fill(column: Int, row: Int, accent: Color) -> Color {
@@ -639,7 +639,7 @@ struct HijriMonthsGridArt: View {
                 }
             }
         }
-        .artFrame(Text("The twelve lunar months in order. Four are sacred: Muharram, Rajab, Dhul-Qa'dah and Dhul-Hijjah."))
+        .artFrame(Text("The twelve lunar months in order. Four are sacred: Muharram, Rajab, Dhul-Qa‘dah and Dhul-Hijjah."))
     }
 
     private func tile(_ item: HijriMonth, accent: Color) -> some View {
@@ -878,7 +878,7 @@ struct JournalNotebookArt: View {
             alignment: .bottomTrailing
         )
         .padding(.vertical, 2)
-        .artFrame(Text("An open notebook and a reed pen: one page carries the ayah \"Nun. By the pen and what they inscribe\", the other a line inked for each entry you write."))
+        .artFrame(Text("An open notebook and a reed pen: one page carries the ayah \"Noon. By the pen and what they inscribe\", the other a line inked for each entry you write."))
     }
 
     private func page<Content: View>(_ accent: Color, @ViewBuilder content: () -> Content) -> some View {
@@ -1058,20 +1058,20 @@ struct ProphetsLastBrickArt: View {
     }
 
     private static let top = [
-        Brick(name: "Yunus", sign: "The fish", symbol: artSymbol("fish", or: "drop")),
+        Brick(name: "Yoonus", sign: "The fish", symbol: artSymbol("fish", or: "drop")),
         Brick(name: "Zakariyya", sign: "A son", symbol: artSymbol("figure.and.child.holdinghands", or: "person.2")),
-        Brick(name: "\u{2018}Isa", sign: "Healing", symbol: "eye"),
+        Brick(name: "\u{2018}Eesa", sign: "Healing", symbol: "eye"),
     ]
     private static let middle = [
-        Brick(name: "Musa", sign: "The sea", symbol: artSymbol("water.waves", or: "drop")),
-        Brick(name: "Dawud", sign: "The armour", symbol: "shield"),
-        Brick(name: "Sulayman", sign: "The birds", symbol: artSymbol("bird", or: "leaf")),
+        Brick(name: "Moosa", sign: "The sea", symbol: artSymbol("water.waves", or: "drop")),
+        Brick(name: "Daawood", sign: "The armour", symbol: "shield"),
+        Brick(name: "Sulaymaan", sign: "The birds", symbol: artSymbol("bird", or: "leaf")),
     ]
     private static let bottom = [
-        Brick(name: "Nuh", sign: "The ark", symbol: artSymbol("sailboat", or: "drop")),
-        Brick(name: "Hud", sign: "The wind", symbol: "wind"),
-        Brick(name: "Ibrahim", sign: "The fire", symbol: "flame"),
-        Brick(name: "Yusuf", sign: "The dream", symbol: "moon.stars"),
+        Brick(name: "Nooh", sign: "The ark", symbol: artSymbol("sailboat", or: "drop")),
+        Brick(name: "Hood", sign: "The wind", symbol: "wind"),
+        Brick(name: "Ibraaheem", sign: "The fire", symbol: "flame"),
+        Brick(name: "Yoosuf", sign: "The dream", symbol: "moon.stars"),
     ]
     private static let brickHeight: CGFloat = 34
 
@@ -1107,7 +1107,7 @@ struct ProphetsLastBrickArt: View {
         }
         // The house stands as the hadith builds it, in every interface.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("A wall of bricks, each a prophet with one of his signs: Nuh's ark, Hud's wind, Ibrahim's fire, Yusuf's dream, Musa's sea, Dawud's armour, Sulayman's birds, Yunus's fish, Zakariya's son, 'Isa healing the blind. The last brick, at the corner, is Muhammad, peace and blessings be upon him, with the revelation he was given.")))
+        .artFrame(Text(verbatim: AppLanguage.article("A wall of bricks, each a prophet with one of his signs: Nooh's ark, Hood's wind, Ibraaheem's fire, Yoosuf's dream, Moosa's sea, Daawood's armour, Sulaymaan's birds, Yoonus's fish, Zakariya's son, Eesa healing the blind. The last brick, at the corner, is Muhammad, peace and blessings be upon him, with the revelation he was given.")))
     }
 
     private func brick(_ brick: Brick, accent: Color) -> some View {
@@ -1189,7 +1189,7 @@ struct PropheciesTimelineArt: View {
         Stop(label: "624", symbol: "book", kind: .fulfilled, name: "Badr"),
         Stop(label: "630", symbol: "book", kind: .fulfilled, name: "Makkah"),
         Stop(label: "651", symbol: "crown", kind: .fulfilled, name: "Persia"),
-        Stop(label: "657", symbol: "person.2", kind: .fulfilled, name: "Siffin"),
+        Stop(label: "657", symbol: "person.2", kind: .fulfilled, name: "Siffeen"),
         Stop(label: "661", symbol: "person.2", kind: .fulfilled, name: "Peace"),
         Stop(label: "", symbol: "", kind: .gap),
         Stop(label: "Today", symbol: "hourglass", kind: .now),
@@ -1236,7 +1236,7 @@ struct PropheciesTimelineArt: View {
         .artPanel(accent)
         // Time runs left to right, as on the page.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("A timeline from the first revelation in 610: prophecies fulfilled at Badr in 624, at the return to Makkah in 630, in the end of the Persian kings in 651, in 'Ammar's death in 657 and al-Hasan's peace in 661, signs seen in our own day, and a dashed line on to the signs still to come.")))
+        .artFrame(Text(verbatim: AppLanguage.article("A timeline from the first revelation in 610: prophecies fulfilled at Badr in 624, at the return to Makkah in 630, in the end of the Persian kings in 651, in Ammaar's death in 657 and al-Hasan's peace in 661, signs seen in our own day, and a dashed line on to the signs still to come.")))
     }
 
     private func column(_ stop: Stop, steppedUp: Bool, accent: Color) -> some View {
@@ -1344,8 +1344,8 @@ struct SunnahDayDialArt: View {
 
     private static let marks = [
         Mark(symbol: "moon.stars.fill", english: "Night prayer and Witr", angle: 212),
-        Mark(symbol: "sunrise.fill", english: "Siwak on rising", angle: 240),
-        Mark(symbol: "sparkle", english: "Two rak'ahs before Fajr", angle: 267),
+        Mark(symbol: "sunrise.fill", english: "Siwaak on rising", angle: 240),
+        Mark(symbol: "sparkle", english: "Two rak‘ahs before Fajr", angle: 267),
         Mark(symbol: "sun.max.fill", english: "Duha", angle: 312),
         Mark(symbol: "sunset.fill", english: "Evening remembrances", angle: 70),
         Mark(symbol: "bed.double.fill", english: "Sleep soon after Isha", angle: 118),
@@ -1407,7 +1407,7 @@ struct SunnahDayDialArt: View {
         }
         // The dial runs clockwise and the page reads left to right, in every interface.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("His day as a dial, the day above the horizon and the night below: the night prayer and Witr, the siwak on rising, the two rak'ahs before Fajr, Duha, the evening remembrances, sleeping soon after Isha, and lying down on the right side.")))
+        .artFrame(Text(verbatim: AppLanguage.article("His day as a dial, the day above the horizon and the night below: the night prayer and Witr, the siwaak on rising, the two rak‘ahs before Fajr, Duha, the evening remembrances, sleeping soon after Isha, and lying down on the right side.")))
     }
 }
 
@@ -1720,9 +1720,9 @@ struct DhikrFourWordsArt: View {
     @Environment(\.appearance) private var appearance
 
     private static let words: [(arabic: String, said: String)] = [
-        ("سُبْحَانَ اللَّهِ", "Subhan Allah"),
+        ("سُبْحَانَ اللَّهِ", "SubhaanAllah"),
         ("الْحَمْدُ لِلَّهِ", "Alhamdulillah"),
-        ("لَا إِلَهَ إِلَّا اللَّهُ", "La ilaha illa Allah"),
+        ("لَا إِلَهَ إِلَّا اللَّهُ", "La ilaaha illallah"),
         ("اللَّهُ أَكْبَرُ", "Allahu Akbar"),
     ]
 
@@ -1746,7 +1746,7 @@ struct DhikrFourWordsArt: View {
                 }
             }
         }
-        .artFrame(Text("The four words most beloved to Allah, round a ring with no first: Subhan Allah, Alhamdulillah, La ilaha illa Allah and Allahu Akbar. It does not matter which you begin with."))
+        .artFrame(Text("The four words most beloved to Allah, round a ring with no first: SubhaanAllah, Alhamdulillah, La ilaaha illallah and Allahu Akbar. It does not matter which you begin with."))
     }
 
     private func word(_ index: Int, accent: Color) -> some View {
@@ -1793,9 +1793,9 @@ struct ProphetStoriesArt: View {
     @Environment(\.appearance) private var appearance
 
     private static let names = [
-        "Adam", "Idris", "Nuh", "Hud", "Salih", "Ibrahim", "Lut", "Isma'il", "Ishaq", "Ya'qub", "Yusuf",
-        "Ayyub", "Shu'ayb", "Musa", "Harun", "Dhul-Kifl", "Dawud", "Sulayman", "Ilyas", "Alyasa'", "Yunus",
-        "Zakariya", "Yahya", "Isa", "Muhammad",
+        "Aadam", "Idrees", "Nooh", "Hood", "Saalih", "Ibraaheem", "Loot", "Ismaa‘eel", "Ishaaq", "Ya‘qoob", "Yoosuf",
+        "Ayyoob", "Shu‘ayb", "Moosa", "Haaroon", "Dhul-Kifl", "Daawood", "Sulaymaan", "Ilyaas", "Alyasa'", "Yoonus",
+        "Zakariya", "Yahya", "Eesa", "Muhammad",
     ]
     /// Nuh, Ibrahim, Musa, 'Isa and Muhammad ﷺ: the five of firm resolve (Quran 46:35, 33:7).
     private static let firm: Set<Int> = [2, 5, 13, 23, 24]
@@ -1853,7 +1853,7 @@ struct ProphetStoriesArt: View {
         }
         // Time runs left to right, as in the library.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("The twenty-five prophets named in the Quran along one arc of time, from Adam to Muhammad, peace and blessings be upon him. The five of firm resolve stand larger: Nuh, Ibrahim, Musa, 'Isa and Muhammad.")))
+        .artFrame(Text(verbatim: AppLanguage.article("The twenty-five prophets named in the Quran along one arc of time, from Aadam to Muhammad, peace and blessings be upon him. The five of firm resolve stand larger: Nooh, Ibraaheem, Moosa, Eesa and Muhammad.")))
     }
 
     private func column(_ slot: Int, accent: Color) -> some View {
@@ -1941,9 +1941,9 @@ struct BestGenerationsArt: View {
     @Environment(\.appearance) private var appearance
 
     private static let tiers: [(name: String, words: String)] = [
-        ("Sahabah", "My generation"),
-        ("Tabi‘un", "Then those who follow them"),
-        ("Atba‘ at-Tabi‘in", "Then those who follow them"),
+        ("Sahaabah", "My generation"),
+        ("Taabi‘oon", "Then those who follow them"),
+        ("Atbaa‘ at-Taabi‘een", "Then those who follow them"),
     ]
     /// The first fullest: each tier's wash and figures, and how far it stops short of the one above.
     private static let wash: [Double] = [0.16, 0.1, 0.06]
@@ -1973,7 +1973,7 @@ struct BestGenerationsArt: View {
         }
         // The tiers step in from the right in every interface, as the drawing has it.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("The three best generations as three tiers, the first the fullest: the Sahabah, the Prophet's generation, then the Tabi'un who followed them, then the Atba' at-Tabi'in who followed them.")))
+        .artFrame(Text(verbatim: AppLanguage.article("The three best generations as three tiers, the first the fullest: the Sahaabah, the Prophet's generation, then the Taabi‘oon who followed them, then the Atbaa' at-Taabi‘een who followed them.")))
     }
 
     private func tier(_ index: Int, accent: Color) -> some View {
@@ -2172,7 +2172,7 @@ struct QuranTwoWaysArt: View {
     private static let stops = [
         Stop(name: "Revealed", year: "610", kind: .revealed),
         Stop(name: "Abu Bakr", year: "632", kind: .milestone),
-        Stop(name: "Uthman", year: "~650", kind: .milestone),
+        Stop(name: "Uthmaan", year: "~650", kind: .milestone),
         Stop(name: "Dots", year: "~690", kind: .milestone),
         Stop(name: "Vowels", year: "~770", kind: .milestone),
         Stop(name: "", year: "", kind: .gap),
@@ -2215,7 +2215,7 @@ struct QuranTwoWaysArt: View {
         .artPanel(accent)
         // Time runs left to right, as in the library.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("The Quran kept two ways, side by side from its revelation in 610 to today: in the hearts, memorised in every generation, and on the page, gathered under Abu Bakr in 632, copied under Uthman around 650, given its dots around 690 and its vowel signs around 770.")))
+        .artFrame(Text(verbatim: AppLanguage.article("The Quran kept two ways, side by side from its revelation in 610 to today: in the hearts, memorised in every generation, and on the page, gathered under Abu Bakr in 632, copied under Uthmaan around 650, given its dots around 690 and its vowel signs around 770.")))
     }
 
     private func column(_ index: Int, accent: Color) -> some View {
@@ -2352,7 +2352,7 @@ struct SahihConditionsArt: View {
         }
         // The chain runs into the grade on the right, in every interface.
         .environment(\.layoutDirection, .leftToRight)
-        .artFrame(Text(verbatim: AppLanguage.article("The five conditions of a sahih hadith, all met: a connected chain, upright narrators, precise narrators, no irregularity and no hidden defect. Together they make it sahih.")))
+        .artFrame(Text(verbatim: AppLanguage.article("The five conditions of a saheeh hadith, all met: a connected chain, upright narrators, precise narrators, no irregularity and no hidden defect. Together they make it saheeh.")))
     }
 
     private func chip(_ index: Int, accent: Color) -> some View {
@@ -2403,7 +2403,7 @@ struct SahihConditionsArt: View {
             .frame(width: Self.badge, height: Self.badge)
             .overlay(Circle().strokeBorder(accent.opacity(0.35), lineWidth: 1.5).padding(-4))
 
-            Text(verbatim: AppLanguage.article("SAHIH"))
+            Text(verbatim: AppLanguage.article("SAHEEH"))
                 .font(.system(size: 11, weight: .heavy))
                 .tracking(AppLanguage.letterSpacing(1.6))
                 .foregroundColor(accent)

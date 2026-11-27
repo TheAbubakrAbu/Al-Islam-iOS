@@ -58,6 +58,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from hadith_spans import arabic_key as shelf_key, english_key, locate_arabic, locate_english  # noqa: E402
 from islam_packs import Hadith  # noqa: E402
 from tilawa_ts import eval_consts, load_softener, xz_compress  # noqa: E402
+from transliteration import restyle_daily  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
@@ -508,6 +509,8 @@ def main() -> None:
             print("  " + line, file=sys.stderr)
         raise SystemExit(1)
 
+    # the Islam tab's one transliteration style (Scripts/transliteration.py)
+    entries = restyle_daily({"entries": entries})["entries"]
     body = json.dumps({"version": 3, "entries": entries}, ensure_ascii=False,
                       separators=(",", ":"), sort_keys=True).encode("utf-8")
     blob = xz_compress(body)

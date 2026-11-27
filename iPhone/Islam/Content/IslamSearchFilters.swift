@@ -24,7 +24,7 @@ extension IslamArticleHome {
         case .guides: return String(localized: "How-To Guides")
         case .proving: return String(localized: "Proving Islam")
         case .stories: return String(localized: "Stories of the Prophets")
-        case .companions: return String(localized: "Sahabah, Ahlul Bayt & Salaf")
+        case .companions: return String(localized: "Sahaabah, Ahlul Bayt & Salaf")
         case .religions: return String(localized: "Refuting Religions")
         case .preservation: return String(localized: "Preservation of the Quran")
         case .hadithScience: return String(localized: "Science of Hadith")
@@ -954,7 +954,7 @@ struct IslamSearchFilterSheet: View {
         } header: {
             header(String(localized: "MATCH"))
         } footer: {
-            Text("Arabic is matched without its harakat, so توحيد finds تَوحِيد.")
+            Text("Arabic is matched without its harakaat, so توحيد finds تَوحِيد.")
         }
     }
 

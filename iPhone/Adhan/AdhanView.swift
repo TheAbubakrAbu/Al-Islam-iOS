@@ -1292,7 +1292,7 @@ private struct CurrentLocationRow: View {
                     // The whole row toggles the big compass, which VoiceOver could not find: the
                     // compass is the control it announces.
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Qibla Compass")
+                    .accessibilityLabel("Qiblah Compass")
                     .accessibilityValue(showBigQibla ? "Expanded" : "Collapsed")
                     .accessibilityHint(showBigQibla ? "Shows the small compass" : "Shows the large compass and your coordinates")
                     .accessibilityAddTraits(.isButton)
@@ -1700,7 +1700,7 @@ private struct QiblaSheet: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // The reading theme's ground (the system grouped color was white on Sepia).
             .accentWashedBackground()
-            .navigationTitle("Qibla")
+            .navigationTitle("Qiblah")
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }

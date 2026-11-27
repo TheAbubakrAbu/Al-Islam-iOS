@@ -189,7 +189,7 @@ enum ArabicReadingBank {
     long|ذُو|dhuu|dhuu|2:105|(is the) Possessor|ذُو=dhuu
     long|عَزِيزٌ|ʿaziizun|ʿaziiz|2:209|(is) All-Mighty|عَ=ʿa زِي=zii زٌ=zun
     long|خَبِيرٌ|khabiirun|khabiir|2:234|(is) All-Aware|خَ=kha بِي=bii رٌ=run
-    long|نُوحٍ|nuuHin|nuuH|4:163|Nuh|نُو=nuu حٍ=Hin
+    long|نُوحٍ|nuuHin|nuuH|4:163|Nooh|نُو=nuu حٍ=Hin
     long|نَذِيرٌ|nadhiirun|nadhiir|7:184|a warner|نَ=na ذِي=dhii رٌ=run
     long|عَلِيمًا|ʿaliiman|ʿaliimaa|4:11|All-Knowing|عَ=ʿa لِي=lii مًا=man
     long|عَظِيمًا|ʿaDhiiman|ʿaDhiimaa|4:27|great|عَ=ʿa ظِي=Dhii مًا=man
@@ -205,7 +205,7 @@ enum ArabicReadingBank {
     small|لَهُۥ|lahuu|lah|2:102|for him|لَ=la هُۥ=huu
     small|هَٰذَا|haadhaa|haadhaa|2:25|This (is)|هَٰ=haa ذَا=dhaa
     small|كَذَٰلِكَ|kadhaalika|kadhaalik|2:73|Like this|كَ=ka ذَٰ=dhaa لِ=li كَ=ka
-    small|مُوسَىٰ|muusaa|muusaa|2:54|Musa|مُو=muu سَىٰ=saa
+    small|مُوسَىٰ|muusaa|muusaa|2:54|Moosa|مُو=muu سَىٰ=saa
     small|خَٰلِدِينَ|khaalidiina|khaalidiin|2:162|(Will) abide forever|خَٰ=khaa لِ=li دِي=dii نَ=na
     small|وَكَذَٰلِكَ|wakadhaalika|wakadhaalik|2:143|And thus|وَ=wa كَ=ka ذَٰ=dhaa لِ=li كَ=ka
     small|إِلَٰهَ|ilaaha|ilaah|2:163|god|إِ=i لَٰ=laa هَ=ha
@@ -218,7 +218,7 @@ enum ArabicReadingBank {
     small|دُونِهِۦ|duunihii|duunih|6:51|other than Him|دُو=duu نِ=ni هِۦ=hii
     small|مَعَهُۥ|maʿahuu|maʿah|2:214|with him|مَ=ma عَ=ʿa هُۥ=huu
     small|وَكَفَىٰ|wakafaa|wakafaa|4:6|And is sufficient|وَ=wa كَ=ka فَىٰ=faa
-    small|صِرَٰطٍ|SiraaTin|SiraaT|2:142|a path|صِ=Si رَٰ=raa طٍ=Tin
+    small|صِرَٰطٍ|SiraaTin|SiraaT|2:142|a path|صِ=Si رَٰ=raa طٍ=Teen
     small|سَلَٰمٌ|salaamun|salaam|6:54|Peace|سَ=sa لَٰ=laa مٌ=mun
     small|بَلَىٰ|balaa|balaa|2:81|Yes|بَ=ba لَىٰ=laa
     small|إِلَٰهٌ|ilaahun|ilaah|2:163|(is) God|إِ=i لَٰ=laa هٌ=hun
@@ -236,12 +236,12 @@ enum ArabicReadingBank {
     small|وَعَلَىٰ|waʿalaa|waʿalaa|2:7|and on|وَ=wa عَ=ʿa لَىٰ=laa
     small|بِهَٰذَا|bihaadhaa|bihaadhaa|2:26|by this|بِ=bi هَٰ=haa ذَا=dhaa
     small|كِتَٰبًا|kitaaban|kitaabaa|3:145|(at a) decree|كِ=ki تَٰ=taa بًا=ban
-    small|يَٰمُوسَىٰ|yaamuusaa|yaamuusaa|2:55|O Musa|يَٰ=yaa مُو=muu سَىٰ=saa
+    small|يَٰمُوسَىٰ|yaamuusaa|yaamuusaa|2:55|O Moosa|يَٰ=yaa مُو=muu سَىٰ=saa
     small|وَرُسُلِهِۦ|warusulihii|warusulih|2:98|and His Messengers|وَ=wa رُ=ru سُ=su لِ=li هِۦ=hii
     small|سَبِيلِهِۦ|sabiilihii|sabiilih|5:35|His way|سَ=sa بِي=bii لِ=li هِۦ=hii
     small|مَتَىٰ|mataa|mataa|2:214|When|مَ=ma تَىٰ=taa
     small|بِغَٰفِلٍ|bighaafilin|bighaafil|2:74|unaware|بِ=bi غَٰ=ghaa فِ=fi لٍ=lin
-    small|هَٰرُونَ|haaruuna|haaruun|2:248|(of) Harun|هَٰ=haa رُو=ruu نَ=na
+    small|هَٰرُونَ|haaruuna|haaruun|2:248|(of) Haaroon|هَٰ=haa رُو=ruu نَ=na
     small|رَوَٰسِيَ|rawaasiya|rawaasiy|13:3|firm mountains|رَ=ra وَٰ=waa سِ=si يَ=ya
     small|أَسَٰطِيرُ|asaaTiiru|asaaTiir|6:25|(the) tales|أَ=a سَٰ=saa طِي=Tii رُ=ru
     small|ظَٰلِمِينَ|Dhaalimiina|Dhaalimiin|7:5|wrongdoers|ظَٰ=Dhaa لِ=li مِي=mii نَ=na
@@ -329,8 +329,8 @@ enum ArabicReadingBank {
     sukoon|وَقَدۡ|waqad|waqad|2:75|while indeed|وَ=wa قَدۡ=qad
     sukoon|وَلَهُمۡ|walahum|walahum|2:7|And for them|وَ=wa لَ=la هُمۡ=hum
     sukoon|يَهۡدِي|yahdii|yahdii|2:142|He guides|يَهۡ=yah دِي=dii
-    sukoon|إِبۡرَٰهِيمَ|ibraahiima|ibraahiim|3:33|(of) Ibrahim|إِبۡ=ib رَٰ=raa هِي=hii مَ=ma
-    sukoon|بَعۡضٍ|baʿDin|baʿD|2:76|some (others)|بَعۡ=baʿ ضٍ=Din
+    sukoon|إِبۡرَٰهِيمَ|ibraahiima|ibraahiim|3:33|(of) Ibraaheem|إِبۡ=ib رَٰ=raa هِي=hii مَ=ma
+    sukoon|بَعۡضٍ|baʿDin|baʿD|2:76|some (others)|بَعۡ=baʿ ضٍ=Deen
     sukoon|عَنۡهُ|ʿanhu|ʿanh|4:31|from [it]|عَنۡ=ʿan هُ=hu
     sukoon|وَجَعَلۡنَا|wajaʿalnaa|wajaʿalnaa|5:13|and We made|وَ=wa جَ=ja عَلۡ=ʿal نَا=naa
     sukoon|لَقَدۡ|laqad|laqad|3:164|Certainly|لَ=la قَدۡ=qad
@@ -460,7 +460,7 @@ enum ArabicReadingBank {
     mixed|فَإِنَّهُۥ|fa'innahuu|fa'innah|2:97|then indeed he|فَ=fa إِ='i نَّ=nna هُۥ=huu
     mixed|أَوۡحَيۡنَآ|awHaynaaaa|awHaynaaaa|4:163|have revealed|أَوۡ=aw حَيۡ=Hay نَآ=naaaa
     mixed|يَسۡتَهۡزِءُونَ|yastahzi'uuna|yastahzi'uun|6:5|mock|يَسۡ=yas تَهۡ=tah زِ=zi ءُو='uu نَ=na
-    mixed|ءَادَمَ|aadama|aadam|2:31|Adam|ءَا=aa دَ=da مَ=ma
+    mixed|ءَادَمَ|aadama|aadam|2:31|Aadam|ءَا=aa دَ=da مَ=ma
     mixed|ءَايَٰتُ|aayaatu|aayaat|2:252|(are the) Verses|ءَا=aa يَٰ=yaa تُ=tu
     mixed|يَٰٓأَهۡلَ|yaaaa'ahla|yaaaa'ahl|3:64|O People|يَٰٓ=yaaaa أَهۡ='ah لَ=la
     mixed|ءَالِهَةً|aalihatan|aalihah|6:19|(there are) gods|ءَا=aa لِ=li هَ=ha ةً=tan
@@ -504,7 +504,7 @@ enum ArabicReadingBank {
     article|ٱلۡيَوۡمَ|al-yawma|al-yawm|2:249|today|ٱلۡ=al- يَوۡ=yaw مَ=ma
     article|ٱلۡحَقِّ|al-Haqqi|al-Haqq|2:61|[the] right|ٱلۡ=al- حَ=Ha قِّ=qqi
     article|ٱلۡعَذَابِ|al-ʿadhaabi|al-ʿadhaab|2:49|torment|ٱلۡ=al- عَ=ʿa ذَا=dhaa بِ=bi
-    article|ٱلشَّيۡطَٰنُ|ash-shayTaanu|ash-shayTaan|2:36|the Shaitaan|ٱل=ash- شَّيۡ=shay طَٰ=Taa نُ=nu
+    article|ٱلشَّيۡطَٰنُ|ash-shayTaanu|ash-shayTaan|2:36|the Shaytaan|ٱل=ash- شَّيۡ=shay طَٰ=Taa نُ=nu
     article|ٱلۡحَكِيمُ|al-Hakiimu|al-Hakiim|2:32|the All-Wise|ٱلۡ=al- حَ=Ha كِي=kii مُ=mu
     article|ٱلۡقَوۡمِ|al-qawmi|al-qawm|2:250|the people|ٱلۡ=al- قَوۡ=qaw مِ=mi
     article|ٱلۡأَوَّلِينَ|al-awwaliina|al-awwaliin|6:25|(of) the former (people)|ٱلۡ=al- أَ=a وَّ=wwa لِي=lii نَ=na
@@ -515,7 +515,7 @@ enum ArabicReadingBank {
     article|ٱلۡعَذَابَ|al-ʿadhaaba|al-ʿadhaab|2:165|the punishment|ٱلۡ=al- عَ=ʿa ذَا=dhaa بَ=ba
     article|ٱلدِّينِ|ad-diini|ad-diin|1:4|(of the) Judgment|ٱل=ad- دِّي=dii نِ=ni
     article|ٱلۡجَنَّةِ|al-jannati|al-jannah|2:82|(of) Paradise|ٱلۡ=al- جَ=ja نَّ=nna ةِ=ti
-    article|ٱلۡحَمۡدُ|al-Hamdu|al-Hamd|1:2|All praises and thanks|ٱلۡ=al- حَمۡ=Ham دُ=du
+    article|ٱلۡحَمۡدُ|al-Hamdu|al-Hamd|1:2|All praises and thanks|ٱلۡ=al- حَمۡ=Haam دُ=du
     article|ٱلۡقَوۡمَ|al-qawma|al-qawm|2:258|the people|ٱلۡ=al- قَوۡ=qaw مَ=ma
     article|وَلِلَّهِ|walillaahi|walillaah|2:115|And for Allah|
     article|ٱلَّيۡلَ|al-layla|al-layl|3:27|the night|ٱ=al- لَّيۡ=lay لَ=la
@@ -660,7 +660,7 @@ enum ArabicReadingBank {
     waqf|غَفُورٌ|ghafuurun|ghafuur|2:173|(is) Oft-Forgiving|غَ=gha فُو=fuu رٌ=run
     waqf|أَلِيمٌ|aliimun|aliim|2:10|painful|أَ=a لِي=lii مٌ=mun
     waqf|قَدِيرٌ|qadiirun|qadiir|2:20|All-Powerful|قَ=qa دِي=dii رٌ=run
-    waqf|بَعۡضٍ|baʿDin|baʿD|2:76|some (others)|بَعۡ=baʿ ضٍ=Din
+    waqf|بَعۡضٍ|baʿDin|baʿD|2:76|some (others)|بَعۡ=baʿ ضٍ=Deen
     waqf|جَنَّٰتٍ|jannaatin|jannaat|2:25|(will be) Gardens|جَ=ja نَّٰ=nnaa تٍ=tin
     waqf|بِهِۦ|bihii|bih|2:22|therewith|بِ=bi هِۦ=hii
     waqf|لَهُۥ|lahuu|lah|2:102|for him|لَ=la هُۥ=huu
@@ -764,7 +764,7 @@ enum ArabicReadingBank {
     سبيل|sabiil|سَبِيلِ|2:154|(the) way|سَ=sa بِي=bii لِ=li
     عذاب|ʿadhaab|عَذَابٌ|2:7|(is) a punishment|عَ=ʿa ذَا=dhaa بٌ=bun
     إليك|ilayk|إِلَيۡكَ|2:4|to you|إِ=i لَيۡ=lay كَ=ka
-    موسى|muusaa|مُوسَىٰ|2:54|Musa|مُو=muu سَىٰ=saa
+    موسى|muusaa|مُوسَىٰ|2:54|Moosa|مُو=muu سَىٰ=saa
     كنا|kunnaa|كُنَّا|4:97|We were|كُ=ku نَّا=nnaa
     منها|minhaa|مِنۡهَا|2:25|therefrom|مِنۡ=min هَا=haa
     لنا|lanaa|لَنَا|2:61|for us|لَ=la نَا=naa
@@ -806,247 +806,247 @@ enum ArabicReadingBank {
 
     /// kind (surah, name) | bare spelling | with marks | the familiar English spelling | meaning
     static let names = """
-    surah|الفاتحة|الفَاتِحَة|Al-Fatihah|The Opener
+    surah|الفاتحة|الفَاتِحَة|Al-Faatihah|The Opener
     surah|البقرة|البَقَرَة|Al-Baqarah|The Cow
-    surah|آل عمران|آلِ عِمرَان|Ali 'Imran|Family of Imran
+    surah|آل عمران|آلِ عِمرَان|Ali 'Imraan|Family of Imraan
     surah|النساء|النِّسَاء|An-Nisa|The Women
-    surah|المائدة|المَائِدَة|Al-Ma'idah|The Table Spread
-    surah|الأنعام|الأَنعَام|Al-An'am|The Cattle
-    surah|الأعراف|الأَعرَاف|Al-A'raf|The Heights
-    surah|الأنفال|الأَنفَال|Al-Anfal|The Spoils of War
+    surah|المائدة|المَائِدَة|Al-Maa’idah|The Table Spread
+    surah|الأنعام|الأَنعَام|Al-An‘aam|The Cattle
+    surah|الأعراف|الأَعرَاف|Al-A‘raaf|The Heights
+    surah|الأنفال|الأَنفَال|Al-Anfaal|The Spoils of War
     surah|التوبة|التَّوبَة|At-Tawbah|The Repentance
-    surah|يونس|يُونُس|Yunus|Jonah
-    surah|هود|هُود|Hud|Hud
-    surah|يوسف|يُوسُف|Yusuf|Joseph
-    surah|الرعد|الرَّعد|Ar-Ra'd|The Thunder
-    surah|إبراهيم|إِبرَاهِيم|Ibrahim|Abraham
+    surah|يونس|يُونُس|Yoonus|Jonah
+    surah|هود|هُود|Hood|Hood
+    surah|يوسف|يُوسُف|Yoosuf|Joseph
+    surah|الرعد|الرَّعد|Ar-Ra‘d|The Thunder
+    surah|إبراهيم|إِبرَاهِيم|Ibraaheem|Abraham
     surah|الحجر|الحِجر|Al-Hijr|The Rocky Tract
     surah|النحل|النَّحل|An-Nahl|The Bee
-    surah|الإسراء|الإِسرَاء|Al-Israa|The Night Journey
+    surah|الإسراء|الإِسرَاء|Al-Isra|The Night Journey
     surah|الكهف|الكَهف|Al-Kahf|The Cave
     surah|مريم|مَريَم|Maryam|Mary
-    surah|طه|طه|Taha|Ta-Ha
+    surah|طه|طه|Taaha|Ta-Ha
     surah|الأنبياء|الأَنبِيَاء|Al-Anbya|The Prophets
     surah|الحج|الحَج|Al-Hajj|The Pilgrimage
-    surah|المؤمنون|المُؤمِنُون|Al-Mu'minun|The Believers
+    surah|المؤمنون|المُؤمِنُون|Al-Mu’minoon|The Believers
     surah|النور|النُّور|An-Noor|The Light
-    surah|الفرقان|الفُرقَان|Al-Furqan|The Criterion
-    surah|الشعراء|الشُّعَرَاء|Ash-Shu'ara|The Poets
+    surah|الفرقان|الفُرقَان|Al-Furqaan|The Criterion
+    surah|الشعراء|الشُّعَرَاء|Ash-Shu‘ara|The Poets
     surah|النمل|النَّمل|An-Naml|The Ant
     surah|القصص|القَصَص|Al-Qasas|The Stories
-    surah|العنكبوت|العَنكَبُوت|Al-'Ankabut|The Spider
-    surah|الروم|الرُّوم|Ar-Rum|The Romans
-    surah|لقمان|لُقمَان|Luqman|Luqman
+    surah|العنكبوت|العَنكَبُوت|Al-Ankaboot|The Spider
+    surah|الروم|الرُّوم|Ar-Room|The Romans
+    surah|لقمان|لُقمَان|Luqmaan|Luqmaan
     surah|السجدة|السَّجدَة|As-Sajdah|The Prostration
-    surah|الأحزاب|الأَحزَاب|Al-Ahzab|The Combined Forces
+    surah|الأحزاب|الأَحزَاب|Al-Ahzaab|The Combined Forces
     surah|سبإ|سَبَإ|Saba|Sheba
-    surah|فاطر|فَاطِر|Fatir|Originator
+    surah|فاطر|فَاطِر|Faatir|Originator
     surah|يس|يسٓ|Ya-Sin|Ya Sin
-    surah|الصافات|الصَّافَّات|As-Saffat|Those who set the Ranks
+    surah|الصافات|الصَّافَّات|As-Saaffaat|Those who set the Ranks
     surah|ص|ص|Sad|The Letter "Saad"
     surah|الزمر|الزُّمَر|Az-Zumar|The Troops
-    surah|غافر|غَافِر|Ghafir|The Forgiver
+    surah|غافر|غَافِر|Ghaafir|The Forgiver
     surah|فصلت|فُصِّلَت|Fussilat|Explained in Detail
-    surah|الشورى|الشُّورَى|Ash-Shuraa|The Consultation
+    surah|الشورى|الشُّورَى|Ash-Shoora|The Consultation
     surah|الزخرف|الزُّخرُف|Az-Zukhruf|The Ornaments of Gold
-    surah|الدخان|الدُّخَان|Ad-Dukhan|The Smoke
-    surah|الجاثية|الجَاثِيَة|Al-Jathiyah|The Crouching
-    surah|الأحقاف|الأَحقَاف|Al-Ahqaf|The Wind-Curved Sandhills
+    surah|الدخان|الدُّخَان|Ad-Dukhaan|The Smoke
+    surah|الجاثية|الجَاثِيَة|Al-Jaathiyah|The Crouching
+    surah|الأحقاف|الأَحقَاف|Al-Ahqaaf|The Wind-Curved Sandhills
     surah|محمد|مُحَمَّد|Muhammad|Muhammad
     surah|الفتح|الفَتح|Al-Fath|The Victory
-    surah|الحجرات|الحُجُرَات|Al-Hujurat|The Rooms
-    surah|ق|ق|Qaf|The Letter "Qaf"
-    surah|الذاريات|الذَّارِيَات|Adh-Dhariyat|The Winnowing Winds
-    surah|الطور|الطُّور|At-Tur|The Mount
+    surah|الحجرات|الحُجُرَات|Al-Hujuraat|The Rooms
+    surah|ق|ق|Qaaf|The Letter "Qaaf"
+    surah|الذاريات|الذَّارِيَات|Adh-Dhaariyaat|The Winnowing Winds
+    surah|الطور|الطُّور|At-Toor|The Mount
     surah|النجم|النَّجم|An-Najm|The Star
     surah|القمر|القَمَر|Al-Qamar|The Moon
     surah|الرحمن|الرَّحمَٰن|Ar-Rahman|The Beneficent
-    surah|الواقعة|الوَاقِعَة|Al-Waqi'ah|The Inevitable
-    surah|الحديد|الحَدِيد|Al-Hadid|The Iron
-    surah|المجادلة|المُجَادِلَة|Al-Mujadila|The Pleading Woman
+    surah|الواقعة|الوَاقِعَة|Al-Waaqi'ah|The Inevitable
+    surah|الحديد|الحَدِيد|Al-Hadeed|The Iron
+    surah|المجادلة|المُجَادِلَة|Al-Mujaadila|The Pleading Woman
     surah|الحشر|الحَشر|Al-Hashr|The Exile
     surah|الممتحنة|المُمتَحَنَة|Al-Mumtahanah|She that is to be examined
     surah|الصف|الصَّف|As-Saf|The Ranks
-    surah|الجمعة|الجُمُعَة|Al-Jumu'ah|The Congregation, Friday
-    surah|المنافقون|المُنَافِقُون|Al-Munafiqun|The Hypocrites
-    surah|التغابن|التَّغَابُن|At-Taghabun|The Mutual Disillusion
-    surah|الطلاق|الطَّلَاق|At-Talaq|The Divorce
-    surah|التحريم|التَّحرِيم|At-Tahrim|The Prohibition
+    surah|الجمعة|الجُمُعَة|Al-Jumuah|The Congregation, Friday
+    surah|المنافقون|المُنَافِقُون|Al-Munaafiqoon|The Hypocrites
+    surah|التغابن|التَّغَابُن|At-Taghaabun|The Mutual Disillusion
+    surah|الطلاق|الطَّلَاق|At-Talaaq|The Divorce
+    surah|التحريم|التَّحرِيم|At-Tahreem|The Prohibition
     surah|الملك|المُلك|Al-Mulk|The Sovereignty
     surah|القلم|القَلَم|Al-Qalam|The Pen
-    surah|الحاقة|الحَاقَّة|Al-Haqqah|The Reality
-    surah|المعارج|المَعَارِج|Al-Ma'arij|The Ascending Stairways
-    surah|نوح|نُوح|Nuh|Noah
+    surah|الحاقة|الحَاقَّة|Al-Haaqqah|The Reality
+    surah|المعارج|المَعَارِج|Al-Ma'aarij|The Ascending Stairways
+    surah|نوح|نُوح|Nooh|Noah
     surah|الجن|الجِنّ|Al-Jinn|The Jinn
     surah|المزمل|المُزَّمِّل|Al-Muzzammil|The Enshrouded One
     surah|المدثر|المُدَّثِّر|Al-Muddaththir|The Cloaked One
-    surah|القيامة|القِيَامَة|Al-Qiyamah|The Resurrection
-    surah|الإنسان|الإِنسَان|Al-Insan|The Man
-    surah|المرسلات|المُرسَلَات|Al-Mursalat|The Emissaries
+    surah|القيامة|القِيَامَة|Al-Qiyaamah|The Resurrection
+    surah|الإنسان|الإِنسَان|Al-Insaan|The Man
+    surah|المرسلات|المُرسَلَات|Al-Mursalaat|The Emissaries
     surah|النبإ|النَّبَإ|An-Naba|The Tidings
-    surah|النازعات|النَّازِعَات|An-Nazi'at|Those who drag forth
-    surah|عبس|عَبَس|'Abasa|He Frowned
-    surah|التكوير|التَّكوِير|At-Takwir|The Overthrowing
-    surah|الإنفطار|الإنفِطَار|Al-Infitar|The Cleaving
-    surah|المطففين|المُطَفِّفِين|Al-Mutaffifin|The Defrauding
-    surah|الإنشقاق|الإنشِقَاق|Al-Inshiqaq|The Sundering
-    surah|البروج|البُرُوج|Al-Buruj|The Mansions of the Stars
-    surah|الطارق|الطَّارِق|At-Tariq|The Nightcomer
-    surah|الأعلى|الأَعلَى|Al-A'la|The Most High
-    surah|الغاشية|الغَاشِية|Al-Ghashiyah|The Overwhelming
+    surah|النازعات|النَّازِعَات|An-Naazi‘aat|Those who drag forth
+    surah|عبس|عَبَس|Abasa|He Frowned
+    surah|التكوير|التَّكوِير|At-Takweer|The Overthrowing
+    surah|الإنفطار|الإنفِطَار|Al-Infitaar|The Cleaving
+    surah|المطففين|المُطَفِّفِين|Al-Mutaffifeen|The Defrauding
+    surah|الإنشقاق|الإنشِقَاق|Al-Inshiqaaq|The Sundering
+    surah|البروج|البُرُوج|Al-Burooj|The Mansions of the Stars
+    surah|الطارق|الطَّارِق|At-Taariq|The Nightcomer
+    surah|الأعلى|الأَعلَى|Al-A‘la|The Most High
+    surah|الغاشية|الغَاشِية|Al-Ghaashiyah|The Overwhelming
     surah|الفجر|الفَجر|Al-Fajr|The Dawn
     surah|البلد|البَلَد|Al-Balad|The City
     surah|الشمس|الشَّمس|Ash-Shams|The Sun
     surah|الليل|اللَّيل|Al-Layl|The Night
     surah|الضحى|الضُّحَى|Ad-Duhaa|The Morning Hours
     surah|الشرح|الشَّرح|Ash-Sharh|The Relief
-    surah|التين|التِّين|At-Tin|The Fig
-    surah|العلق|العَلَق|Al-'Alaq|The Clot
+    surah|التين|التِّين|At-Teen|The Fig
+    surah|العلق|العَلَق|Al-Alaq|The Clot
     surah|القدر|القَدر|Al-Qadr|The Power
     surah|البينة|البَيِّنَة|Al-Bayyinah|The Clear Proof
     surah|الزلزلة|الزَّلزَلَة|Az-Zalzalah|The Earthquake
-    surah|العاديات|العَادِيَات|Al-'Adiyat|The Courser
-    surah|القارعة|القَارِعَة|Al-Qari'ah|The Calamity
-    surah|التكاثر|التَّكَاثُر|At-Takathur|The Rivalry in world increase
-    surah|العصر|العَصر|Al-'Asr|The Declining Day
+    surah|العاديات|العَادِيَات|Al-Aadiyaat|The Courser
+    surah|القارعة|القَارِعَة|Al-Qaari'ah|The Calamity
+    surah|التكاثر|التَّكَاثُر|At-Takaathur|The Rivalry in world increase
+    surah|العصر|العَصر|Al-Asr|The Declining Day
     surah|الهمزة|الهُمَزَة|Al-Humazah|The Traducer
     surah|الفيل|الفِيل|Al-Fil|The Elephant
     surah|قريش|قُرَيش|Quraysh|Quraysh
-    surah|الماعون|المَاعُون|Al-Ma'un|The Small kindnesses
+    surah|الماعون|المَاعُون|Al-Maa'oon|The Small kindnesses
     surah|الكوثر|الكَوثَر|Al-Kawthar|The Abundance
-    surah|الكافرون|الكَافِرُون|Al-Kafirun|The Disbelievers
+    surah|الكافرون|الكَافِرُون|Al-Kaafiroon|The Disbelievers
     surah|النصر|النَّصر|An-Nasr|The Divine Support
     surah|المسد|المَسَد|Al-Masad|The Palm Fiber
-    surah|الإخلاص|الإِخلَاص|Al-Ikhlas|The Sincerity
+    surah|الإخلاص|الإِخلَاص|Al-Ikhlaas|The Sincerity
     surah|الفلق|الفَلَق|Al-Falaq|The Daybreak
-    surah|الناس|النَّاس|An-Nas|Mankind
-    name|الرحمن|الرَّحمَٰن|Ar-Rahman|The Entirely Merciful
+    surah|الناس|النَّاس|An-Naas|Mankind
+    name|الرحمن|الرَّحمَٰن|Ar-Rahmaan|The Entirely Merciful
     name|الرحيم|الرَّحِيم|Ar-Raheem|The Especially Merciful
     name|الملك|المَلِك|Al-Malik|The King
-    name|القدوس|القُدُّوس|Al-Quddus|The Most Sacred
-    name|السلام|السَّلَام|As-Salam|The Giver of Peace
-    name|المومن|المُؤمِن|Al-Mumin|The Infuser of Faith
+    name|القدوس|القُدُّوس|Al-Quddoos|The Most Sacred
+    name|السلام|السَّلَام|As-Salaam|The Giver of Peace
+    name|المومن|المُؤمِن|Al-Mu’min|The Infuser of Faith
     name|المهيمن|المُهَيمِن|Al-Muhaymin|The Guardian
-    name|العزيز|العَزِيز|Al-Aziz|The Mighty One
-    name|الجبار|الجَبَّار|Al-Jabbar|The All Compelling
+    name|العزيز|العَزِيز|Al-Azeez|The Mighty One
+    name|الجبار|الجَبَّار|Al-Jabbaar|The All Compelling
     name|المتكبر|المُتَكَبِّر|Al-Mutakabbir|The Dominant One
-    name|الخالق|الخَالِق|Al-Khaliq|The Creator
-    name|البارئ|البَارِئ|Al-Bari|The Evolver
+    name|الخالق|الخَالِق|Al-Khaaliq|The Creator
+    name|البارئ|البَارِئ|Al-Baari|The Evolver
     name|المصور|المُصَوِّر|Al-Musawwir|The Flawless Shaper
-    name|الغفار|الغَفَّار|Al-Ghaffar|The Great Forgiver
-    name|القهار|القَهَّار|Al-Qahhar|The All-Prevailing One
-    name|الوهاب|الوَهَّاب|Al-Wahhab|The Supreme Bestower
-    name|الرزاق|الرَّزَّاق|Ar-Razzaq|The Total Provider
-    name|الفتاح|الفَتَّاح|Al-Fattah|The Opener
-    name|العليم|العَلِيم|Al-Alim|The All-Knowing One
-    name|القابض|القَابِض|Al-Qabid|The Restricting One
-    name|الباسط|البَاسِط|Al-Basit|The Extender
-    name|الخافض|الخَافِض|Al-Khafid|The Reducer
-    name|الرافع|الرَّافِع|Ar-Rafi|The Elevating One
-    name|المعز|المُعِزّ|Al-Mu'izz|The Honourer-Bestower
+    name|الغفار|الغَفَّار|Al-Ghaffaar|The Great Forgiver
+    name|القهار|القَهَّار|Al-Qahhaar|The All-Prevailing One
+    name|الوهاب|الوَهَّاب|Al-Wahhaab|The Supreme Bestower
+    name|الرزاق|الرَّزَّاق|Ar-Razzaaq|The Total Provider
+    name|الفتاح|الفَتَّاح|Al-Fattaah|The Opener
+    name|العليم|العَلِيم|Al-Aleem|The All-Knowing One
+    name|القابض|القَابِض|Al-Qaabid|The Restricting One
+    name|الباسط|البَاسِط|Al-Baasit|The Extender
+    name|الخافض|الخَافِض|Al-Khaafid|The Reducer
+    name|الرافع|الرَّافِع|Ar-Raafi‘|The Elevating One
+    name|المعز|المُعِزّ|Al-Mu‘izz|The Honourer-Bestower
     name|المذل|المُذِلّ|Al-Mudhill|The Abaser
-    name|السميع|السَّمِيع|As-Sami|The All-Hearer
+    name|السميع|السَّمِيع|As-Samee‘|The All-Hearer
     name|البصير|البَصِير|Al-Baseer|The All-Seeing
     name|الحكم|الحَكَم|Al-Hakam|The Impartial Judge
     name|العدل|العَدل|Al-Adl|The Embodiment of Justice
     name|اللطيف|اللَّطِيف|Al-Lateef|The Knower of Subtleties
-    name|الخبير|الخَبِير|Al-Khabir|The All-Aware One
+    name|الخبير|الخَبِير|Al-Khabeer|The All-Aware One
     name|الحليم|الحَلِيم|Al-Haleem|The Clement One
     name|العظيم|العَظِيم|Al-Azeem|The Magnificent One
     name|الغفور|الغَفُور|Al-Ghafoor|The All-Forgiving
-    name|الشكور|الشَّكُور|Ash-Shakur|The Acknowledging One
+    name|الشكور|الشَّكُور|Ash-Shakoor|The Acknowledging One
     name|العلي|العَلِيّ|Al-Aliyy|The Sublime One
     name|الكبير|الكَبِير|Al-Kabeer|The Great One
     name|الحفيظ|الحَفِيظ|Al-Hafeez|The Guarding One
     name|المقيت|المُقِيت|Al-Muqeet|The Sustaining One
     name|الحسيب|الحَسِيب|Al-Haseeb|The Reckoning One
     name|الجليل|الجَلِيل|Al-Jaleel|The Majestic One
-    name|الكريم|الكَرِيم|Al-Karim|The Bountiful One
-    name|الرقيب|الرَّقِيب|Ar-Raqib|The Watchful One
+    name|الكريم|الكَرِيم|Al-Kareem|The Bountiful One
+    name|الرقيب|الرَّقِيب|Ar-Raqeeb|The Watchful One
     name|المجيب|المُجِيب|Al-Mujeeb|The Responding One
-    name|الواسع|الوَاسِع|Al-Wasi|The All-Pervading One
+    name|الواسع|الوَاسِع|Al-Waasi‘|The All-Pervading One
     name|الحكيم|الحَكِيم|Al-Hakeem|The Wise One
-    name|الودود|الوَدُود|Al-Wadud|The Loving One
+    name|الودود|الوَدُود|Al-Wadood|The Loving One
     name|المجيد|المَجِيد|Al-Majeed|The Glorious One
-    name|الباعث|البَاعِث|Al-Ba'ith|The Infuser of New Life
+    name|الباعث|البَاعِث|Al-Baa‘ith|The Infuser of New Life
     name|الشهيد|الشَّهِيد|Ash-Shaheed|The All Observing Witness
     name|الحق|الحَقّ|Al-Haqq|The Embodiment of Truth
     name|الوكيل|الوَكِيل|Al-Wakeel|The Universal Trustee
     name|القوي|القَوِيّ|Al-Qawiyy|The Strong One
-    name|المتين|المَتِين|Al-Matin|The Firm One
-    name|الولي|الوَلِيّ|Al-Waliy|The Protecting Associate
+    name|المتين|المَتِين|Al-Mateen|The Firm One
+    name|الولي|الوَلِيّ|Al-Waliyy|The Protecting Associate
     name|الحميد|الحَمِيد|Al-Hameed|The Sole-Laudable One
     name|المحصي|المُحصِي|Al-Muhsi|The All-Enumerating One
     name|المبدئ|المُبدِئ|Al-Mubdi|The Originator
-    name|المعيد|المُعِيد|Al-Muid|The Restorer
+    name|المعيد|المُعِيد|Al-Mu‘eed|The Restorer
     name|المحيي|المُحيِي|Al-Muhyi|The Maintainer of life
     name|المميت|المُمِيت|Al-Mumeet|The Inflictor of Death
     name|الحي|الحَيّ|Al-Hayy|The Eternally Living One
-    name|القيوم|القَيُّوم|Al-Qayyum|The Self-Subsisting One
-    name|الواجد|الوَاجِد|Al-Wajid|The Pointing One
+    name|القيوم|القَيُّوم|Al-Qayyoom|The Self-Subsisting One
+    name|الواجد|الوَاجِد|Al-Waajid|The Pointing One
     name|الماجد|المَاجِد|Al-Maajid|The All-Noble One
-    name|الواحد|الوَاحِد|Al-Wahid|The Only One
+    name|الواحد|الوَاحِد|Al-Waahid|The Only One
     name|الاحد|الأَحَد|Al-Ahad|The Sole One
     name|الصمد|الصَّمَد|As-Samad|The Supreme Provider
-    name|القادر|القَادِر|Al-Qadir|The All-Powerful
+    name|القادر|القَادِر|Al-Qaadir|The All-Powerful
     name|المقتدر|المُقتَدِر|Al-Muqtadir|The All Authoritative One
     name|المقدم|المُقَدِّم|Al-Muqaddim|The Expediting One
-    name|الموخر|المُؤَخِّر|Al-Muakhkhir|The Delayer
+    name|الموخر|المُؤَخِّر|Al-Mu’akhkhir|The Delayer
     name|الاول|الأَوَّل|Al-Awwal|The Very First
-    name|الاخر|الآخِر|Al-Akhir|The Infinite Last One
+    name|الاخر|الآخِر|Al-Aakhir|The Infinite Last One
     name|الظاهر|الظَّاهِر|Az-Zaahir|The Perceptible
     name|الباطن|البَاطِن|Al-Baatin|The Imperceptible
-    name|الوالي|الوَالِي|Al-Wali|The Holder of Supreme Authority
-    name|المتعال|المُتَعَال|Al-Mutaali|The Extremely Exalted One
+    name|الوالي|الوَالِي|Al-Waali|The Holder of Supreme Authority
+    name|المتعال|المُتَعَال|Al-Muta‘aali|The Extremely Exalted One
     name|البر|البَرّ|Al-Barr|The Fountain-Head of Truth
-    name|التواب|التَّوَاب|At-Tawwab|The Ever-Acceptor of Repentance
+    name|التواب|التَّوَاب|At-Tawwaab|The Ever-Acceptor of Repentance
     name|المنتقم|المُنتَقِم|Al-Muntaqim|The Retaliator
-    name|العفو|العَفُوّ|Al-Afuw|The Supreme Pardoner
-    name|الرءوف|الرَّءُوف|Ar-Rauf|The Benign One
-    name|مالك الملك|مَالِكُ المُلك|Malikul-Mulk|The Eternal Possessor of Sovereignty
-    name|ذو الجلال والاكرام|ذُو الجَلَالِ وَالإِكرَام|Dhul-Jalaali-Wal-Ikram|The Possessor of Majesty and Honour
+    name|العفو|العَفُوّ|Al-Afuww|The Supreme Pardoner
+    name|الرءوف|الرَّءُوف|Ar-Ra’oof|The Benign One
+    name|مالك الملك|مَالِكُ المُلك|Maalikul-Mulk|The Eternal Possessor of Sovereignty
+    name|ذو الجلال والاكرام|ذُو الجَلَالِ وَالإِكرَام|Dhul-Jalaali wal-Ikraam|The Possessor of Majesty and Honour
     name|المقسط|المُقسِط|Al-Muqsit|The Just One
-    name|الجامع|الجَامِع|Al-Jami|The Assembler of Scattered Creations
-    name|الغني|الغَنِيّ|Al-Ghaniy|The Self-Sufficient One
+    name|الجامع|الجَامِع|Al-Jaami‘|The Assembler of Scattered Creations
+    name|الغني|الغَنِيّ|Al-Ghaniyy|The Self-Sufficient One
     name|المغني|المُغنِي|Al-Mughni|The Enricher
-    name|المانع|المَانِع|Al-Mani|The Preventer
-    name|الضار|الضَّارّ|Ad-Darr|The Distressor
-    name|النافع|النَّافِع|An-Naafi|The Bestower of Benefits
+    name|المانع|المَانِع|Al-Maani‘|The Preventer
+    name|الضار|الضَّارّ|Ad-Daarr|The Distressor
+    name|النافع|النَّافِع|An-Naafi‘|The Bestower of Benefits
     name|النور|النُّور|An-Noor|The Prime Light
-    name|الهادي|الهَادِي|Al-Hadi|The Provider of Guidance
-    name|البديع|البَدِيع|Al-Badi|The Unique One
+    name|الهادي|الهَادِي|Al-Haadi|The Provider of Guidance
+    name|البديع|البَدِيع|Al-Badee‘|The Unique One
     name|الباقي|البَاقِي|Al-Baaqi|The Ever Surviving One
-    name|الوارث|الوَارِث|Al-Warith|The Eternal Inheritor
+    name|الوارث|الوَارِث|Al-Waarith|The Eternal Inheritor
     name|الرشيد|الرَّشِيد|Ar-Rasheed|The Guide to Path of Rectitude
-    name|الصبور|الصَّبُور|As-Sabur|The Extensively Enduring One
+    name|الصبور|الصَّبُور|As-Saboor|The Extensively Enduring One
     """
 
     /// bare spelling | the familiar English spelling | meaning
     static let everyday = """
     بسم الله|Bismillah|In the name of Allah
     الحمد لله|Alhamdulillah|All praise is for Allah
-    سبحان الله|Subhan Allah|Glory be to Allah
+    سبحان الله|SubhaanAllah|Glory be to Allah
     الله أكبر|Allahu Akbar|Allah is the Greatest
-    لا إله إلا الله|La ilaha illa Allah|There is no god but Allah
+    لا إله إلا الله|La ilaha illallah|There is no god but Allah
     أستغفر الله|Astaghfirullah|I seek Allah's forgiveness
     إن شاء الله|In sha Allah|If Allah wills
     ما شاء الله|Ma sha Allah|What Allah has willed
     السلام عليكم|As-salamu alaykum|Peace be upon you
     وعليكم السلام|Wa alaykum as-salam|And upon you be peace
-    جزاك الله خيرا|Jazak Allahu khayran|May Allah reward you with good
-    بارك الله فيك|Barak Allahu feek|May Allah bless you
+    جزاك الله خيرا|Jazaak Allahu khayran|May Allah reward you with good
+    بارك الله فيك|Baarak Allahu feek|May Allah bless you
     لا حول ولا قوة إلا بالله|La hawla wa la quwwata illa billah|There is no might or power except with Allah
     إنا لله وإنا إليه راجعون|Inna lillahi wa inna ilayhi raji'un|We belong to Allah, and to Him we return
     صلى الله عليه وسلم|Salla Allahu alayhi wa sallam|May Allah send blessings and peace upon him
     رضي الله عنه|Radi Allahu anhu|May Allah be pleased with him
-    سبحان الله وبحمده|Subhan Allahi wa bihamdih|Glory and praise be to Allah
-    سبحان الله العظيم|Subhan Allah al-Adheem|Glory be to Allah, the Magnificent
-    سبحان ربي العظيم|Subhana Rabbiyal-Adheem|Glory be to my Lord, the Magnificent
-    سبحان ربي الأعلى|Subhana Rabbiyal-A'la|Glory be to my Lord, the Most High
+    سبحان الله وبحمده|SubhaanAllahi wa bihamdih|Glory and praise be to Allah
+    سبحان الله العظيم|SubhaanAllah al-Azeem|Glory be to Allah, the Magnificent
+    سبحان ربي العظيم|Subhaana Rabbiyal-Azeem|Glory be to my Lord, the Magnificent
+    سبحان ربي الأعلى|Subhaana Rabbiyal-A‘la|Glory be to my Lord, the Most High
     ربنا ولك الحمد|Rabbana wa lakal-hamd|Our Lord, and to You is all praise
     سمع الله لمن حمده|Sami' Allahu liman hamidah|Allah hears the one who praises Him
     الله أعلم|Allahu a'lam|Allah knows best
-    أعوذ بالله من الشيطان الرجيم|A'udhu billahi min ash-shaytan ir-rajeem|I seek refuge in Allah from Satan, the outcast
+    أعوذ بالله من الشيطان الرجيم|A‘oodhu billahi min ash-shaytan ir-rajeem|I seek refuge in Allah from Satan, the outcast
     حسبنا الله ونعم الوكيل|Hasbuna Allahu wa ni'mal-wakeel|Allah is enough for us, and the best to rely on
     اللهم صل على محمد|Allahumma salli ala Muhammad|O Allah, send blessings upon Muhammad
     يرحمك الله|Yarhamuk Allah|May Allah have mercy on you

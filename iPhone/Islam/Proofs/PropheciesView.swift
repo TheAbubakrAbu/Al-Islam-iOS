@@ -80,6 +80,12 @@ struct PropheciesView: View {
     /// Every entry with its folded search key, built once.
     private static let searchIndex: [(entry: Entry, key: String)] = entries.map { ($0, $0.searchKey) }
 
+    /// The articles in the order the index lists them, group by group: the pages an article's
+    /// Previous | Next pair turns through (`ArticleSequencePager`).
+    static let readingOrder: [ArticlePageTurn.Neighbour] = Entry.Group.allCases
+        .flatMap { group in entries.filter { $0.group == group } }
+        .map { ArticlePageTurn.Neighbour(id: $0.id, title: $0.title) }
+
     private var grouped: [(Entry.Group, [Entry])] {
         Entry.Group.allCases.compactMap { group in
             let rows = Self.entries.filter { $0.group == group }
@@ -127,7 +133,7 @@ struct PropheciesView: View {
                         systemImage: "checkmark.seal.fill",
                         headline: "Nor does he speak from [his own] inclination. It is not but a revelation revealed.",
                         source: "Quran 53:3\u{2013}4",
-                        message: "He foretold things no one could have known, and he said them in front of people who wrote them down and lived to see them happen. This library gathers \(Self.entries.count) of them, each with what the Quran or the narration says and what history did with it, and closes with the signs he said are still to come. Every hadith is quoted from this app's own collections and is sahih or hasan; where the graders differ, the citation names the grader followed.",
+                        message: "He foretold things no one could have known, and he said them in front of people who wrote them down and lived to see them happen. This library gathers \(Self.entries.count) of them, each with what the Quran or the narration says and what history did with it, and closes with the signs he said are still to come. Every hadith is quoted from this app's own collections and is saheeh or hasan; where the graders differ, the citation names the grader followed.",
                         stats: [
                             ResourceHeroStat("\(Self.entries.count)", "prophecies"),
                             ResourceHeroStat("\(grouped.count)", "groups"),
@@ -222,8 +228,21 @@ struct PropheciesView: View {
     }
 }
 
-/// One prophecy: what was said, the narration itself, and what happened.
+/// One prophecy, turned in place to its neighbours in the library by the pair at its foot (Abu,
+/// 2026-11-26: "For every article add a [previous] and next button at the bottom and don't make it
+/// open a new page"). Every way in opens this, so the pair is there however the page was reached.
 struct ProphecyArticleView: View {
+    let entry: PropheciesView.Entry
+
+    var body: some View {
+        ArticleSequencePager(id: entry.id, pages: PropheciesView.readingOrder) { id in
+            if let page = PropheciesView.entries.first(where: { $0.id == id }) { ProphecyArticlePage(entry: page) }
+        }
+    }
+}
+
+/// One prophecy: what was said, the narration itself, and what happened.
+struct ProphecyArticlePage: View {
     let entry: PropheciesView.Entry
     /// The page's sections as its search bar scans them: the corpus has no row for a generated page.
     /// Folded once here, not per body pass.
@@ -238,6 +257,8 @@ struct ProphecyArticleView: View {
         List {
             Group {
                 SignArticleSections(sections: entry.sections, lead: entry.summary)
+
+                ArticlePagerSection(article: entry.id)
             }
             .themedListRowBackground()
         }

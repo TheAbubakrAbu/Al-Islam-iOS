@@ -135,7 +135,7 @@ enum AskAIScope: String, CaseIterable, Identifiable, Codable {
             // out (the calendar, the qibla, the night), a different pair of each every day.
             let times = ["What time is Fajr tomorrow?", "When is Maghrib in Makkah today?",
                          "What are the prayer times in London on Friday?", "How long until Asr?"]
-            let more = ["When is Ramadan?", "Which way is the qibla?", "What is the Hijri date today?",
+            let more = ["When is Ramadan?", "Which way is the qiblah?", "What is the Hijri date today?",
                         "When does the last third of the night begin?"]
             let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
             return [times[day % 4], more[day % 4], times[(day + 1) % 4], more[(day + 1) % 4]]
